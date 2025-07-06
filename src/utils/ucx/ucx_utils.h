@@ -119,6 +119,14 @@ public:
                                std::chrono::microseconds &err_margin,
                                nixl_cost_t &method);
     nixl_status_t flushEp(nixlUcxReq &req);
+
+    /* Batch operations */
+    nixl_status_t prepareBatch(const std::vector<std::tuple<uint64_t, void*,
+                               nixlUcxRkey&, nixlUcxMem&, size_t>>& operations,
+                               bool has_completion_msg,
+                               const std::string& completion_msg,
+                               nixlUcxReq &req);
+    nixl_status_t postBatch(nixlUcxReq batch_req);
 };
 
 class nixlUcxMem {
@@ -173,10 +181,10 @@ private:
     const std::shared_ptr<nixlUcxContext> ctx;
     const std::unique_ptr<ucp_worker, void(*)(ucp_worker*)> worker;
 
-    [[nodiscard]] static ucp_worker* createUcpWorker(nixlUcxContext&);
+    [[nodiscard]] static ucp_worker* createUcpWorker(nixlUcxContext&, ucp_rma_batch_callback_t, void*);
 
   public:
-    explicit nixlUcxWorker(const std::shared_ptr<nixlUcxContext> &_ctx);
+    explicit nixlUcxWorker(const std::shared_ptr<nixlUcxContext> &_ctx, ucp_rma_batch_callback_t rma_batch_callback = nullptr, void* callback_arg = nullptr);
 
     nixlUcxWorker( nixlUcxWorker&& ) = delete;
     nixlUcxWorker( const nixlUcxWorker& ) = delete;

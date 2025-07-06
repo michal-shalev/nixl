@@ -327,6 +327,8 @@ private:
     };
     std::optional<Notif> notif;
 
+    nixlUcxReq req;
+
 public:
     auto& notification() {
         return notif;
@@ -420,6 +422,14 @@ public:
 
     size_t getWorkerId() const {
         return worker_id;
+    }
+
+    void setBatchReq(nixlUcxReq req) {
+        this->req = req;
+    }
+
+    nixlUcxReq getBatchReq() const {
+        return req;
     }
 };
 
@@ -575,7 +585,9 @@ nixlUcxEngine::nixlUcxEngine (const nixlBackendInitParams* init_params)
                                           err_handling_mode, numWorkers, init_params->syncMode);
 
     for (unsigned int i = 0; i < numWorkers; i++)
-        uws.emplace_back(std::make_unique<nixlUcxWorker>(uc));
+        uws.emplace_back(std::make_unique<nixlUcxWorker>(uc,
+                                                 &nixlUcxEngine::rmaBatchCallback,
+                                                 this));
 
     const auto &uw = uws.front();
     workerAddr = uw->epAddr();
@@ -603,7 +615,7 @@ nixlUcxEngine::nixlUcxEngine (const nixlBackendInitParams* init_params)
 
     uw->regAmCallback(CONN_CHECK, connectionCheckAmCb, this);
     uw->regAmCallback(DISCONNECT, connectionTermAmCb, this);
-    uw->regAmCallback(NOTIF_STR, notifAmCb, this);
+    // uw->regAmCallback(NOTIF_STR, notifAmCb, this);
 
     // Temp fixup
     if (getenv("NIXL_DISABLE_CUDA_ADDR_WA")) {
@@ -957,6 +969,70 @@ nixl_status_t nixlUcxEngine::prepXfer (const nixl_xfer_op_t &operation,
     nixlUcxBackendH *intHandle = new nixlUcxBackendH(*this, getWorkerId());
 
     handle = (nixlBackendReqH*)intHandle;
+
+    if (operation == NIXL_WRITE) {
+        // Try to use batch operations
+        auto search = remoteConnMap.find(remote_agent);
+        if (search == remoteConnMap.end()) {
+            NIXL_ERROR << "Remote agent not found: " << remote_agent;
+            delete intHandle;
+            return NIXL_ERR_NOT_FOUND;
+        }
+
+        size_t workerId = getWorkerId();
+        const auto& ep = search->second->getEp(workerId);
+
+        // Prepare batch operations
+        std::vector<std::tuple<uint64_t, void*, nixlUcxRkey&, nixlUcxMem&, size_t>> operations;
+
+        bool is_batchable = true;
+        for (int i = 0; i < local.descCount(); ++i) {
+            uintptr_t local_addr = local[i].addr;
+            uintptr_t remote_addr = remote[i].addr;
+            if ((local_addr % 8 != 0) || (remote_addr % 8 != 0)) {
+                is_batchable = false;
+                break;
+            }
+        }
+
+        if (!is_batchable) {
+            // Not all descriptors are aligned for batching, fall back to individual puts
+            return NIXL_SUCCESS;
+        }
+
+        for (int i = 0; i < local.descCount(); ++i) {
+            nixlUcxPrivateMetadata *lmd = static_cast<nixlUcxPrivateMetadata*>(local[i].metadataP);
+            nixlUcxPublicMetadata *rmd = static_cast<nixlUcxPublicMetadata*>(remote[i].metadataP);
+
+            std::cout << "remote[" << i << "].addr = 0x" << std::hex << remote[i].addr << std::dec << std::endl;
+
+            operations.emplace_back(
+                remote[i].addr,                    // remote address
+                (void*)local[i].addr,              // local address
+                std::ref(rmd->getRkey(workerId)),  // remote key
+                std::ref(lmd->mem),                // local memory handle
+                local[i].len                       // size
+            );
+        }
+
+        bool has_completion_msg = opt_args && opt_args->hasNotif;
+        std::string completion_msg = has_completion_msg ? opt_args->notifMsg : "";
+
+        nixlUcxReq req;
+        nixl_status_t ret = ep->prepareBatch(operations, has_completion_msg, completion_msg, req);
+
+        if (ret == NIXL_ERR_NOT_SUPPORTED) {
+            // Batch operations not supported, fall back to individual operations
+            return NIXL_SUCCESS;
+        } else if (ret != NIXL_SUCCESS && ret != NIXL_IN_PROG) {
+            delete intHandle;
+            return ret;
+        }
+
+        // Store the batch request in the handle
+        intHandle->setBatchReq(req);
+    }
+
     return NIXL_SUCCESS;
 }
 
@@ -1016,6 +1092,43 @@ nixl_status_t nixlUcxEngine::estimateXferCost (const nixl_xfer_op_t &operation,
     return NIXL_SUCCESS;
 }
 
+nixl_status_t nixlUcxEngine::postXferBatch(const nixl_xfer_op_t &operation,
+                                           const nixl_meta_dlist_t &local,
+                                           const nixl_meta_dlist_t &remote,
+                                           const std::string &remote_agent,
+                                           nixlBackendReqH* &handle,
+                                           const nixl_opt_b_args_t* opt_args) const
+{
+    nixlUcxBackendH *intHandle = (nixlUcxBackendH *)handle;
+
+    // Check if we have a prepared batch request
+    nixlUcxReq batchReq = intHandle->getBatchReq();
+    if (batchReq == nullptr) {
+        // No batch request prepared, fall back to individual operations
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+
+    // Find the remote agent connection
+    auto search = remoteConnMap.find(remote_agent);
+    if (search == remoteConnMap.end()) {
+        NIXL_ERROR << "Remote agent not found: " << remote_agent;
+        return NIXL_ERR_NOT_FOUND;
+    }
+
+    size_t workerId = intHandle->getWorkerId();
+    const auto& ep = search->second->getEp(workerId);
+
+    // Call postBatch on the endpoint
+    nixl_status_t ret = ep->postBatch(batchReq);
+
+    // Store the result back in handle for tracking
+    if (ret == NIXL_IN_PROG) {
+        intHandle->setBatchReq(batchReq);
+    }
+
+    return ret;
+}
+
 nixl_status_t nixlUcxEngine::postXfer (const nixl_xfer_op_t &operation,
                                        const nixl_meta_dlist_t &local,
                                        const nixl_meta_dlist_t &remote,
@@ -1035,6 +1148,16 @@ nixl_status_t nixlUcxEngine::postXfer (const nixl_xfer_op_t &operation,
 
     if (lcnt != rcnt) {
         return NIXL_ERR_INVALID_PARAM;
+    }
+
+    if (operation == NIXL_WRITE) {
+        ret = postXferBatch(operation, local, remote, remote_agent, handle, opt_args);
+        if (ret != NIXL_ERR_NOT_SUPPORTED) {
+            if (_retHelper(ret, intHandle, req)) {
+                return ret;
+            }
+            goto flush;
+        }
     }
 
     for(i = 0; i < lcnt; i++) {
@@ -1066,6 +1189,7 @@ nixl_status_t nixlUcxEngine::postXfer (const nixl_xfer_op_t &operation,
         }
     }
 
+flush:
     /*
      * Flush keeps intHandle non-empty until the operation is actually
      * completed, which can happen after local requests completion.
@@ -1195,6 +1319,28 @@ nixlUcxEngine::notifAmCb(void *arg, const void *header,
         engine->notifMainList.push_back(std::make_pair(std::move(remote_name), std::move(msg)));
     }
 
+    return UCS_OK;
+}
+
+ucs_status_t nixlUcxEngine::rmaBatchCallback(void *arg,
+                                             void *msg,
+                                             size_t length,
+                                             ucp_rma_batch_recv_param *param)
+{
+    nixlSerDes ser_des;
+
+    std::string ser_str(static_cast<const char*>(msg), length);
+    auto* engine = static_cast<nixlUcxEngine*>(arg);
+
+    ser_des.importStr(ser_str);
+    std::string remote_name = ser_des.getStr("name");
+    std::string notif_msg   = ser_des.getStr("msg");
+
+    if (engine->isProgressThread()) {
+        engine->notifPthrPriv.push_back(std::make_pair(std::move(remote_name), std::move(notif_msg)));
+    } else {
+        engine->notifMainList.push_back(std::make_pair(std::move(remote_name), std::move(notif_msg)));
+    }
     return UCS_OK;
 }
 

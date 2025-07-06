@@ -28,6 +28,10 @@
 #include <chrono>
 #include <poll.h>
 
+extern "C" {
+#include <ucp/api/ucp.h>
+}
+
 #include "nixl.h"
 #include "backend/backend_engine.h"
 #include "common/str_tools.h"
@@ -179,6 +183,11 @@ class nixlUcxEngine
         void notifProgress();
         void notifProgressCombineHelper(notif_list_t &src, notif_list_t &tgt);
 
+        // RMA batch callback
+        static ucs_status_t rmaBatchCallback(void *arg, void *msg,
+                                                 size_t length,
+                                                 ucp_rma_batch_recv_param *param);
+
     public:
         nixlUcxEngine(const nixlBackendInitParams* init_params);
         ~nixlUcxEngine();
@@ -221,6 +230,13 @@ class nixlUcxEngine
                                 const std::string &remote_agent,
                                 nixlBackendReqH* &handle,
                                 const nixl_opt_b_args_t* opt_args=nullptr) const override;
+
+        nixl_status_t postXferBatch(const nixl_xfer_op_t &operation,
+                                    const nixl_meta_dlist_t &local,
+                                    const nixl_meta_dlist_t &remote,
+                                    const std::string &remote_agent,
+                                    nixlBackendReqH* &handle,
+                                    const nixl_opt_b_args_t* opt_args=nullptr) const;
 
         nixl_status_t estimateXferCost(const nixl_xfer_op_t &operation,
                                        const nixl_meta_dlist_t &local,

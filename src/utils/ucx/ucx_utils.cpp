@@ -29,6 +29,11 @@
 #include "config.h"
 #include "serdes/serdes.h"
 
+extern "C"
+{
+#include <ucp/api/ucp.h>
+}
+
 using namespace std;
 
 nixl_status_t ucx_status_to_nixl(ucs_status_t status)
@@ -442,16 +447,29 @@ namespace
            field_mask = UCP_WORKER_PARAM_FIELD_THREAD_MODE;
            thread_mode = toUcsThreadModeChecked(t);
        }
-   };
 
-   static_assert(sizeof(nixlUcpWorkerParams) == sizeof(ucp_worker_params_t));
+       nixlUcpWorkerParams &withRmaBatchCallback(ucp_rma_batch_callback_t cb, void *arg) {
+            field_mask |= UCP_WORKER_PARAM_FIELD_RMA_BATCH_CB;
+            rma_batch_callback = cb;
+            if (arg) {
+                field_mask |= UCP_WORKER_PARAM_FIELD_RMA_BATCH_CB_ARG;
+                rma_batch_cb_arg = arg;
+            }
+            return *this;
+        }
+   };
 
 }  // namespace
 
-ucp_worker* nixlUcxWorker::createUcpWorker(nixlUcxContext& ctx)
+ucp_worker* nixlUcxWorker::createUcpWorker(nixlUcxContext& ctx, ucp_rma_batch_callback_t callback, void* callback_arg)
 {
     ucp_worker* worker = nullptr;
-    const nixlUcpWorkerParams params(ctx.mt_type);
+
+    nixlUcpWorkerParams params(ctx.mt_type);
+    if (callback) {
+        params.withRmaBatchCallback(callback, callback_arg);
+    }
+
     const ucs_status_t status = ucp_worker_create(ctx.ctx, &params, &worker);
     if(status != UCS_OK) {
         const auto err_str = std::string("Failed to create UCX worker: ") +
@@ -462,9 +480,9 @@ ucp_worker* nixlUcxWorker::createUcpWorker(nixlUcxContext& ctx)
     return worker;
 }
 
-nixlUcxWorker::nixlUcxWorker(const std::shared_ptr< nixlUcxContext >&_ctx)
+nixlUcxWorker::nixlUcxWorker(const std::shared_ptr< nixlUcxContext >&_ctx, ucp_rma_batch_callback_t rma_batch_callback, void* callback_arg)
     : ctx(_ctx),
-      worker(createUcpWorker(*ctx), &ucp_worker_destroy)
+      worker(createUcpWorker(*ctx, rma_batch_callback, callback_arg), &ucp_worker_destroy)
 {}
 
 std::string nixlUcxWorker::epAddr()
@@ -609,4 +627,71 @@ void nixlUcxWorker::reqRelease(nixlUcxReq req)
 void nixlUcxWorker::reqCancel(nixlUcxReq req)
 {
     ucp_request_cancel(worker.get(), req);
+}
+
+nixl_status_t nixlUcxEp::prepareBatch(const std::vector<std::tuple<uint64_t,
+                                      void*, nixlUcxRkey&, nixlUcxMem&,
+                                      size_t>>& operations,
+                                      bool has_completion_msg,
+                                      const std::string& completion_msg,
+                                      nixlUcxReq &req)
+{
+    nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) {
+        return status;
+    }
+
+    std::vector<ucp_rma_batch_iov_elem_t> batch_iov(operations.size());
+    for (size_t i = 0; i < operations.size(); ++i) {
+        const auto& [remote_addr, local_addr, rkey, mem, size] = operations[i];
+
+        uintptr_t local_ptr  = reinterpret_cast<uintptr_t>(local_addr);
+        uintptr_t remote_ptr = static_cast<uintptr_t>(remote_addr);
+
+        if (local_ptr % 8 != 0 || remote_ptr % 8 != 0) {
+            NIXL_ERROR << "Unaligned access: local=" << local_ptr
+                    << " remote=" << remote_ptr << " index=" << i;
+        }
+
+        batch_iov[i].opcode     = UCP_OP_PUT;
+        batch_iov[i].local_va   = local_addr;
+        batch_iov[i].memh       = mem.memh;
+        batch_iov[i].remote_va  = remote_addr;
+        batch_iov[i].rkey       = rkey.rkeyh;
+        batch_iov[i].length     = size;
+    }
+
+    ucp_rma_batch_param_t param = {};
+    if (has_completion_msg) {
+        param.field_mask = UCP_RMA_BATCH_FIELD_COMPLETION_MESSAGE |
+                          UCP_RMA_BATCH_FIELD_COMPLETION_MESSAGE_LENGTH;
+        param.completion_message = const_cast<void*>(static_cast<const void*>(completion_msg.c_str()));
+        param.completion_message_length = completion_msg.size();
+    }
+
+    ucs_status_ptr_t request = ucp_ep_rma_prepare_batch(eph, batch_iov.data(), operations.size(),
+                                                        has_completion_msg ? &param : nullptr);
+    if (UCS_PTR_IS_PTR(request)) {
+        req = (void*)request;
+        return NIXL_IN_PROG;
+    }
+
+    return ucx_status_to_nixl(UCS_PTR_STATUS(request));
+}
+
+nixl_status_t nixlUcxEp::postBatch(nixlUcxReq batch_req)
+{
+    nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) {
+        return status;
+    }
+
+    ucs_status_ptr_t request = ucp_ep_rma_post_batch(batch_req);
+    if (UCS_PTR_IS_PTR(request)) {
+        // For now, we'll just ignore the post request handle
+        // In a full implementation, this might need to be tracked
+        return NIXL_IN_PROG;
+    }
+
+    return ucx_status_to_nixl(UCS_PTR_STATUS(request));
 }
