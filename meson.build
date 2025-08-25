@@ -67,16 +67,9 @@ if cuda_dep.found()
     cuda = import('unstable-cuda')
     nvcc = meson.get_compiler('cuda')
 
-    nvcc_flags = []
-    nvcc_flags_link = []
-    if get_option('nvcc_gencode') != ''
-      foreach p : get_option('nvcc_gencode').split(' ')
-        nvcc_flags += p
-        nvcc_flags_link += p
-      endforeach
-    endif
+    nvcc_flags = get_option('nvcc_gencode')
     add_project_arguments(nvcc_flags, language: 'cuda')
-    add_project_link_arguments(nvcc_flags_link, language: 'cuda')
+    add_project_link_arguments(nvcc_flags, language: 'cuda')
 
     # Refer to https://mesonbuild.com/Cuda-module.html
     add_project_arguments('-forward-unknown-to-host-compiler', language: 'cuda')
