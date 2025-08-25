@@ -39,7 +39,7 @@ enum nixl_gpu_coordination_level_t {
  *
  * @param req_hndl    [in]  The request handle.
  * @param address     [in]  The local address of the memory to be transferred.
- * @param remote_addr [in]  The remote address of the memory to be transferred.
+ * @param remote_addr [in]  The remote address of the memory to be transferred to.
  * @param xfer_status [out] The status of the transfer. If null the status is not reported.
  * @param is_no_delay [in]  Whether to use no-delay mode. True by default.
  *
@@ -61,7 +61,7 @@ nixlGpuPostMemXferReq(nixlGpuXferReqH* req_hndl,
  *
  * @param req_hndl           [in]  The request handle.
  * @param signal_inc         [in]  The increment of the signal.
- * @param signal_remote_addr [in]  The remote address of the signal.
+ * @param signal_remote_addr [in]  The remote address of the signal to be sent to.
  * @param xfer_status        [out] The status of the transfer. If null the status is not reported.
  * @param is_no_delay        [in]  Whether to use no-delay mode. True by default.
  *
@@ -86,9 +86,9 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH* req_hndl,
  * @param indices            [in]  The indices of the blocks to send.
  * @param sizes              [in]  The sizes of the blocks to send.
  * @param addresses          [in]  The addresses of the blocks to send.
- * @param remote_addrs       [in]  The remote addresses of the blocks to send.
- * @param signal_remote_addr [in]  The remote address of the signal. If address is 0, no signal.
+ * @param remote_addrs       [in]  The remote addresses of the blocks to send to.
  * @param signal_inc         [in]  The increment of the signal.
+ * @param signal_remote_addr [in]  The remote address of the signal to be sent to. If address is 0, no signal.
  * @param xfer_status        [out] The status of the transfer. If null the status is not reported.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  *
@@ -102,8 +102,8 @@ nixlGpuPostPartialMemXferReq(nixlGpuXferReqH* req_hndl,
                              const size_t* sizes,
                              const void** addresses,
                              const uint64_t* remote_addrs,
-                             uint64_t signal_remote_addr,
                              uint64_t signal_inc,
+                             uint64_t signal_remote_addr,
                              nixlGpuXferStatusH* xfer_status = nullptr,
                              bool is_no_delay = true)
 {
@@ -116,9 +116,9 @@ nixlGpuPostPartialMemXferReq(nixlGpuXferReqH* req_hndl,
  * @param req_hndl           [in]  The request handle.
  * @param sizes              [in]  The sizes of the blocks to send.
  * @param addresses          [in]  The addresses of the blocks to send.
- * @param remote_addrs       [in]  The remote addresses of the blocks to send.
- * @param signal_remote_addr [in]  The remote address of the signal. If address is 0, no signal.
+ * @param remote_addrs       [in]  The remote addresses of the blocks to send to.
  * @param signal_inc         [in]  The increment of the signal.
+ * @param signal_remote_addr [in]  The remote address of the signal to be sent to. If address is 0, no signal.
  * @param xfer_status        [out] The status of the transfer. If null the status is not reported.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  *
@@ -126,12 +126,12 @@ nixlGpuPostPartialMemXferReq(nixlGpuXferReqH* req_hndl,
  */
 template<nixl_gpu_coordination_level_t level = NIXL_GPU_COORDINATION_BLOCK>
 __device__ static inline nixl_status_t
-nixlPostGpuXferReq(nixlGpuXferReqH* req_hndl,
+nixlGpuPostXferReq(nixlGpuXferReqH* req_hndl,
                    const size_t* sizes,
                    const void** addresses,
                    const uint64_t* remote_addrs,
-                   uint64_t signal_remote_addr,
                    uint64_t signal_inc,
+                   uint64_t signal_remote_addr,
                    nixlGpuXferStatusH* xfer_status = nullptr,
                    bool is_no_delay = true)
 {
