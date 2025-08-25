@@ -1628,7 +1628,7 @@ nixlUcxEngine::exportXferReqtoGPU(nixlBackendReqH *handle, nixlGpuXferReqH *&gpu
 }
 
 nixl_status_t
-nixlUcxEngine::releaseXferReqtoGPU(nixlBackendReqH *handle) const {
+nixlUcxEngine::releaseXferReqtoGPU(nixlBackendReqH *handle, nixlGpuXferReqH *gpu_req_hndl) const {
     return NIXL_ERR_NOT_SUPPORTED;
 }
 

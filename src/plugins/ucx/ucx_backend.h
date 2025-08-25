@@ -199,7 +199,7 @@ public:
     exportXferReqtoGPU(nixlBackendReqH *handle, nixlGpuXferReqH *&gpu_req_hndl) const override;
 
     nixl_status_t
-    releaseXferReqtoGPU(nixlBackendReqH *handle) const override;
+    releaseXferReqtoGPU(nixlBackendReqH *handle, nixlGpuXferReqH *gpu_req_hndl) const override;
 
     int
     progress() override;
