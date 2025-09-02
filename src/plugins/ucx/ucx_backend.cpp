@@ -1631,6 +1631,11 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &handle,
 void
 nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
 
+nixl_status_t
+nixlUcxEngine::initGpuSignal(const nixlBackendMD &meta, void *signal) const {
+    return NIXL_ERR_NOT_SUPPORTED;
+}
+
 int nixlUcxEngine::progress() {
     // TODO: add listen for connection handling if necessary
     int ret = 0;

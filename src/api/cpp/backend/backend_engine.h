@@ -166,6 +166,12 @@ class nixlBackendEngine {
         virtual void
         releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
 
+        // Initialize a signal for GPU transfer using memory handle from descriptor
+        virtual nixl_status_t
+        initGpuSignal(const nixlBackendMD &meta, void *signal) const {
+            return NIXL_ERR_NOT_SUPPORTED;
+        }
+
         // *** Needs to be implemented if supportsRemote() is true *** //
 
         // Gets serialized form of public metadata

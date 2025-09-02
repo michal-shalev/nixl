@@ -1268,6 +1268,49 @@ nixlAgent::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {
 }
 
 nixl_status_t
+nixlAgent::initGpuSignal(const nixl_xfer_dlist_t &signal_descs, void *signal) const {
+    if (!signal) {
+        NIXL_ERROR_FUNC << "signal pointer is null";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    if (signal_descs.descCount() == 0) {
+        NIXL_ERROR_FUNC << "signal descriptor list is empty";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    NIXL_SHARED_LOCK_GUARD(data->lock);
+
+    // Find backends that have registrations for this memory type
+    backend_set_t *backends = data->memorySection->queryBackends(signal_descs.getType());
+    if (!backends || backends->empty()) {
+        NIXL_ERROR_FUNC << "no available backends for mem type '" << signal_descs.getType() << "'";
+        return NIXL_ERR_NOT_FOUND;
+    }
+
+    // Try each backend to find the signal metadata
+    for (auto &backend : *backends) {
+        nixl_meta_dlist_t result(signal_descs.getType(), signal_descs.isSorted());
+        nixl_status_t ret = data->memorySection->populate(signal_descs, backend, result);
+
+        if (ret == NIXL_SUCCESS && result.descCount() > 0 && result[0].metadataP) {
+            ret = backend->initGpuSignal(*result[0].metadataP, signal);
+
+            if (ret == NIXL_SUCCESS) {
+                return NIXL_SUCCESS;
+            } else if (ret != NIXL_ERR_NOT_SUPPORTED) {
+                NIXL_ERROR_FUNC << "backend '" << backend->getType()
+                                << "' failed to initialize GPU signal with status " << ret;
+                return ret;
+            }
+        }
+    }
+
+    NIXL_ERROR_FUNC << "signal memory is not registered with any backend that supports GPU signals";
+    return NIXL_ERR_NOT_FOUND;
+}
+
+nixl_status_t
 nixlAgent::releasedDlistH (nixlDlistH* dlist_hndl) const {
     NIXL_LOCK_GUARD(data->lock);
     delete dlist_hndl;
