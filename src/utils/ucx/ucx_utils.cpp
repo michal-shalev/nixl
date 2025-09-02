@@ -589,6 +589,30 @@ void nixlUcxContext::memDereg(nixlUcxMem &mem)
     ucp_mem_unmap(ctx, mem.memh);
 }
 
+nixl_status_t
+nixlUcxContext::initGpuSignal(const nixlUcxMem &mem, void *signal) const {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    if (!signal) {
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    // Set up parameters for UCX device counter initialization
+    ucp_device_counter_init_params_t params;
+    params.field_mask = UCP_DEVICE_COUNTER_INIT_PARAMS_FIELD_MEMH;
+    params.memh = mem.memh;
+
+    // Initialize the GPU signal using UCX
+    ucs_status_t status = ucp_device_counter_init(ctx, &params, signal);
+
+    return ucx_status_to_nixl(status);
+#else
+    // Suppress unused parameter warnings
+    (void)mem;
+    (void)signal;
+    return NIXL_ERR_NOT_SUPPORTED;
+#endif
+}
+
 /* ===========================================
  * Active message handling
  * =========================================== */

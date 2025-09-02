@@ -1633,7 +1633,19 @@ nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
 
 nixl_status_t
 nixlUcxEngine::initGpuSignal(const nixlBackendMD &meta, void *signal) const {
-    return NIXL_ERR_NOT_SUPPORTED;
+    if (!signal) {
+        NIXL_ERROR << "Invalid signal pointer";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    const nixlUcxPrivateMetadata *ucx_meta = static_cast<const nixlUcxPrivateMetadata *>(&meta);
+
+    if (!uc) {
+        NIXL_ERROR << "UCX context not initialized";
+        return NIXL_ERR_BACKEND;
+    }
+
+    return uc->initGpuSignal(ucx_meta->mem, signal);
 }
 
 int nixlUcxEngine::progress() {

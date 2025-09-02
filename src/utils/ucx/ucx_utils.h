@@ -23,6 +23,9 @@
 extern "C"
 {
 #include <ucp/api/ucp.h>
+#ifdef HAVE_UCX_GPU_DEVICE_API
+#include <ucp/api/device/ucp_host.h>
+#endif
 }
 
 #include <nixl_types.h>
@@ -186,6 +189,10 @@ public:
     int memReg(void *addr, size_t size, nixlUcxMem &mem, nixl_mem_t nixl_mem_type);
     [[nodiscard]] std::string packRkey(nixlUcxMem &mem);
     void memDereg(nixlUcxMem &mem);
+
+    /* GPU signal management */
+    [[nodiscard]] nixl_status_t
+    initGpuSignal(const nixlUcxMem &mem, void *signal) const;
 
     friend class nixlUcxWorker;
 };

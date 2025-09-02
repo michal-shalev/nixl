@@ -1290,7 +1290,7 @@ nixlAgent::initGpuSignal(const nixl_xfer_dlist_t &signal_descs, void *signal) co
 
     // Try each backend to find the signal metadata
     for (auto &backend : *backends) {
-        nixl_meta_dlist_t result(signal_descs.getType(), signal_descs.isSorted());
+        nixl_meta_dlist_t result(signal_descs.getType());
         nixl_status_t ret = data->memorySection->populate(signal_descs, backend, result);
 
         if (ret == NIXL_SUCCESS && result.descCount() > 0 && result[0].metadataP) {
