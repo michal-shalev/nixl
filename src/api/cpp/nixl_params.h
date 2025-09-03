@@ -57,7 +57,7 @@ class nixlAgentConfig {
          * @var ETCD watch timeout in seconds
          *      Timeout for waiting for metadata changes when watching etcd keys.
          */
-        std::chrono::seconds etcdWatchTimeoutSec;
+        std::chrono::seconds etcdWatchTimeout;
 
         /**
          * @brief  Agent configuration constructor for enabling various features.
@@ -67,7 +67,7 @@ class nixlAgentConfig {
          * @param sync_mode          Thread synchronization mode
          * @param pthr_delay_us      Optional delay for pthread in us
          * @param lthr_delay_us      Optional delay for listener thread in us
-         * @param etcd_watch_timeout_sec Optional timeout for etcd watch operations in seconds
+         * @param etcd_watch_timeout Optional timeout for etcd watch operations in seconds
          */
         nixlAgentConfig(const bool use_prog_thread,
                         const bool use_listen_thread = false,
@@ -76,14 +76,14 @@ class nixlAgentConfig {
                         unsigned int num_workers = 1,
                         const uint64_t pthr_delay_us = 0,
                         const uint64_t lthr_delay_us = 100000,
-                        const std::chrono::seconds etcd_watch_timeout_sec = std::chrono::seconds(5))
+                        const std::chrono::seconds etcd_watch_timeout = std::chrono::seconds(5))
             : useProgThread(use_prog_thread),
               useListenThread(use_listen_thread),
               listenPort(port),
               syncMode(sync_mode),
               pthrDelay(pthr_delay_us),
               lthrDelay(lthr_delay_us),
-              etcdWatchTimeoutSec(etcd_watch_timeout_sec) {}
+              etcdWatchTimeout(etcd_watch_timeout) {}
 
         /**
          * @brief Copy constructor for nixlAgentConfig object
