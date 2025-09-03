@@ -57,7 +57,7 @@ class nixlAgentConfig {
          * @var ETCD watch timeout in seconds
          *      Timeout for waiting for metadata changes when watching etcd keys.
          */
-        uint64_t etcdWatchTimeoutSec;
+        std::chrono::seconds etcdWatchTimeoutSec;
 
         /**
          * @brief  Agent configuration constructor for enabling various features.
