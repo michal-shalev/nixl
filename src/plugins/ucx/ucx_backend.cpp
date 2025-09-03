@@ -1648,7 +1648,7 @@ void
 nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
 
 nixl_status_t
-nixlUcxEngine::initGpuSignal(const nixlBackendMD &meta, void *signal) const {
+nixlUcxEngine::prepGpuSignal(const nixlBackendMD &meta, void *signal) const {
     if (!signal) {
         NIXL_ERROR << "Invalid signal pointer";
         return NIXL_ERR_INVALID_PARAM;
@@ -1661,7 +1661,7 @@ nixlUcxEngine::initGpuSignal(const nixlBackendMD &meta, void *signal) const {
         return NIXL_ERR_BACKEND;
     }
 
-    return uc->initGpuSignal(ucx_meta->mem, signal);
+    return uc->prepGpuSignal(ucx_meta->mem, signal);
 }
 
 int nixlUcxEngine::progress() {

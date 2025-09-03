@@ -1268,12 +1268,7 @@ nixlAgent::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {
 }
 
 nixl_status_t
-nixlAgent::initGpuSignal(const nixl_xfer_dlist_t &signal_descs, void *signal) const {
-    if (!signal) {
-        NIXL_ERROR_FUNC << "signal pointer is null";
-        return NIXL_ERR_INVALID_PARAM;
-    }
-
+nixlAgent::prepGpuSignal(const nixl_xfer_dlist_t &signal_descs) const {
     if (signal_descs.descCount() == 0) {
         NIXL_ERROR_FUNC << "signal descriptor list is empty";
         return NIXL_ERR_INVALID_PARAM;
@@ -1294,13 +1289,14 @@ nixlAgent::initGpuSignal(const nixl_xfer_dlist_t &signal_descs, void *signal) co
         nixl_status_t ret = data->memorySection->populate(signal_descs, backend, result);
 
         if (ret == NIXL_SUCCESS && result.descCount() > 0 && result[0].metadataP) {
-            ret = backend->initGpuSignal(*result[0].metadataP, signal);
+            void *signal = reinterpret_cast<void*>(result[0].addr);
+            ret = backend->prepGpuSignal(*result[0].metadataP, signal);
 
             if (ret == NIXL_SUCCESS) {
                 return NIXL_SUCCESS;
             } else if (ret != NIXL_ERR_NOT_SUPPORTED) {
                 NIXL_ERROR_FUNC << "backend '" << backend->getType()
-                                << "' failed to initialize GPU signal with status " << ret;
+                                << "' failed to prepare GPU signal with status " << ret;
                 return ret;
             }
         }

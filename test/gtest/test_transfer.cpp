@@ -661,7 +661,7 @@ TEST_P(TestTransfer, GetXferTelemetryDisabled) {
     deregisterMem(getAgent(3), dst_buffers, DRAM_SEG);
 }
 
-TEST_P(TestTransfer, InitGpuSignal) {
+TEST_P(TestTransfer, PrepGpuSignal) {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     nixl_mem_list_t mems;
     nixl_b_params_t params;
@@ -680,11 +680,10 @@ TEST_P(TestTransfer, InitGpuSignal) {
 
     auto signal_desc_list = makeDescList<nixlBasicDesc>(signal_buffer, VRAM_SEG);
 
-    void *signal_ptr = reinterpret_cast<void *>(static_cast<uintptr_t>(signal_buffer[0]));
-    nixl_status_t status = getAgent(0).initGpuSignal(signal_desc_list, signal_ptr);
+    nixl_status_t status = getAgent(0).prepGpuSignal(signal_desc_list);
 
     EXPECT_EQ(status, NIXL_SUCCESS)
-        << "initGpuSignal returned unexpected status: " << nixlEnumStrings::statusStr(status);
+        << "prepGpuSignal returned unexpected status: " << nixlEnumStrings::statusStr(status);
 
     deregisterMem(getAgent(0), signal_buffer, VRAM_SEG);
 #endif

@@ -338,18 +338,17 @@ class nixlAgent {
         releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const;
 
         /**
-         * @brief  Initialize a signal for GPU transfer.
+         * @brief  Prepare a signal for GPU transfer.
          *
          * The caller must allocate the signal memory before calling this function.
          * Use @ref getBackendParams to query the required signal size and allocate
          * the signal accordingly.
          *
          * @param  signal_descs  [in] Transfer descriptor list for the signal memory
-         * @param  signal        [in] Pre-allocated signal memory to be initialized
          * @return nixl_status_t Error code if call was not successful
          */
         nixl_status_t
-        initGpuSignal(const nixl_xfer_dlist_t &signal_descs, void *signal) const;
+        prepGpuSignal(const nixl_xfer_dlist_t &signal_descs) const;
 
         /**
          * @brief  Release the prepared descriptor list handle `dlist_hndl`

@@ -200,7 +200,7 @@ public:
     releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const override;
 
     nixl_status_t
-    initGpuSignal(const nixlBackendMD &meta, void *signal) const override;
+    prepGpuSignal(const nixlBackendMD &meta, void *signal) const override;
 
     int
     progress();

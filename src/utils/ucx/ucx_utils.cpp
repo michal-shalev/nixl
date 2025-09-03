@@ -590,7 +590,7 @@ void nixlUcxContext::memDereg(nixlUcxMem &mem)
 }
 
 nixl_status_t
-nixlUcxContext::initGpuSignal(const nixlUcxMem &mem, void *signal) const {
+nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     if (!signal) {
         return NIXL_ERR_INVALID_PARAM;
