@@ -456,7 +456,7 @@ protected:
 
     bool m_cuda_device = false;
     gtest::ScopedEnv env;
-    std::vector<nixlBackendH*> backend_handles;
+    std::vector<nixlBackendH *> backend_handles;
 
 private:
     static constexpr uint64_t DEV_ID = 0;
