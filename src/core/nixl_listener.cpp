@@ -198,7 +198,7 @@ private:
     }
 
 public:
-    nixlEtcdClient(const std::string &my_agent_name, uint64_t timeout_sec = 5)
+    nixlEtcdClient(const std::string &my_agent_name, std::chrono::seconds timeout_sec = 5)
         : watch_timeout_sec(timeout_sec) {
         const char* etcd_endpoints = std::getenv("NIXL_ETCD_ENDPOINTS");
         if (!etcd_endpoints || strlen(etcd_endpoints) == 0) {
@@ -434,7 +434,7 @@ void nixlAgentData::commWorker(nixlAgent* myAgent){
     std::unique_ptr<nixlEtcdClient> etcdClient = nullptr;
     // useEtcd is set in nixlAgent constructor and is true if NIXL_ETCD_ENDPOINTS is set
     if(useEtcd) {
-        etcdClient = std::make_unique<nixlEtcdClient>(name, config.etcdWatchTimeoutSec);
+        etcdClient = std::make_unique<nixlEtcdClient>(name, config.etcdWatchTimeoutSec.count());
     }
 #endif // HAVE_ETCD
 

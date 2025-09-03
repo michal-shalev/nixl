@@ -426,7 +426,7 @@ PYBIND11_MODULE(_bindings, m) {
                       unsigned int,
                       uint64_t,
                       uint64_t,
-                      uint64_t>());
+                      std::chrono::seconds>());
 
     // note: pybind will automatically convert notif_map to python types:
     // so, a Dictionary of string: List<string>
