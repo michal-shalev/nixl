@@ -678,7 +678,7 @@ TEST_P(TestTransfer, PrepGpuSignal) {
     std::vector<MemBuffer> signal_buffer;
     createRegisteredMem(getAgent(0), gpu_signal_size, 1, VRAM_SEG, signal_buffer);
 
-    auto signal_desc_list = makeDescList<nixlBasicDesc>(signal_buffer, VRAM_SEG);
+    auto signal_desc_list = makeDescList<nixlBlobDesc>(signal_buffer, VRAM_SEG);
 
     nixl_status_t status = getAgent(0).prepGpuSignal(signal_desc_list);
 

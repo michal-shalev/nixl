@@ -344,11 +344,11 @@ class nixlAgent {
          * Use @ref getBackendParams to query the required signal size and allocate
          * the signal accordingly.
          *
-         * @param  signal_descs  [in] Transfer descriptor list for the signal memory
+         * @param  signal_descs  [in] Registered descriptor list for the signal memory
          * @return nixl_status_t Error code if call was not successful
          */
         nixl_status_t
-        prepGpuSignal(const nixl_xfer_dlist_t &signal_descs) const;
+        prepGpuSignal(const nixl_reg_dlist_t &signal_descs) const;
 
         /**
          * @brief  Release the prepared descriptor list handle `dlist_hndl`
