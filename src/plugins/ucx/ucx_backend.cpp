@@ -1656,11 +1656,6 @@ nixlUcxEngine::prepGpuSignal(const nixlBackendMD &meta, void *signal) const {
 
     const nixlUcxPrivateMetadata *ucx_meta = static_cast<const nixlUcxPrivateMetadata *>(&meta);
 
-    if (!uc) {
-        NIXL_ERROR << "UCX context not initialized";
-        return NIXL_ERR_BACKEND;
-    }
-
     return uc->prepGpuSignal(ucx_meta->mem, signal);
 }
 
