@@ -1295,7 +1295,7 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs) const {
         nixl_status_t ret = data->memorySection->populate(xfer_descs, backend, result);
 
         if (ret == NIXL_SUCCESS) {
-            void *signal = reinterpret_cast<void*>(result[0].addr);
+            void *signal = reinterpret_cast<void *>(result[0].addr);
             ret = backend->prepGpuSignal(*result[0].metadataP, signal);
 
             if (ret == NIXL_SUCCESS) {
