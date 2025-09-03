@@ -1277,10 +1277,7 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs) const {
     NIXL_SHARED_LOCK_GUARD(data->lock);
 
     // Convert reg_dlist to xfer_dlist for populate call
-    nixl_xfer_dlist_t xfer_descs(signal_descs.getType());
-    for (int i = 0; i < signal_descs.descCount(); ++i) {
-        xfer_descs.addDesc(static_cast<nixlBasicDesc>(signal_descs[i]));
-    }
+    nixl_xfer_dlist_t xfer_descs = signal_descs.trim();
 
     // Find backends that have registrations for this memory type
     backend_set_t *backends = data->memorySection->queryBackends(signal_descs.getType());
