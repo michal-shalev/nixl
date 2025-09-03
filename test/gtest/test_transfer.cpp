@@ -139,6 +139,7 @@ protected:
             agents.back()->createBackend(getBackendName(), getBackendParams(), backend_handle);
         ASSERT_EQ(status, NIXL_SUCCESS);
         EXPECT_NE(backend_handle, nullptr);
+        backend_handles.push_back(backend_handle);
     }
 
     void SetUp() override
@@ -455,6 +456,7 @@ protected:
 
     bool m_cuda_device = false;
     gtest::ScopedEnv env;
+    std::vector<nixlBackendH*> backend_handles;
 
 private:
     static constexpr uint64_t DEV_ID = 0;
@@ -657,6 +659,35 @@ TEST_P(TestTransfer, GetXferTelemetryDisabled) {
     invalidateMD(2, 3);
     deregisterMem(getAgent(2), src_buffers, DRAM_SEG);
     deregisterMem(getAgent(3), dst_buffers, DRAM_SEG);
+}
+
+TEST_P(TestTransfer, InitGpuSignal) {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    nixl_mem_list_t mems;
+    nixl_b_params_t params;
+    nixl_status_t backend_status = getAgent(0).getBackendParams(backend_handles[0], mems, params);
+
+    EXPECT_EQ(backend_status, NIXL_SUCCESS) << "getBackendParams failed";
+
+    size_t gpu_signal_size;
+    auto gpu_signal_it = params.find("gpu_signal_size");
+    ASSERT_NE(gpu_signal_it, params.end()) << "Backend does not report gpu_signal_size parameter";
+    gpu_signal_size = std::stoul(gpu_signal_it->second);
+
+    // Allocate a buffer on the GPU with the size of the signal
+    std::vector<MemBuffer> signal_buffer;
+    createRegisteredMem(getAgent(0), gpu_signal_size, 1, VRAM_SEG, signal_buffer);
+
+    auto signal_desc_list = makeDescList<nixlBasicDesc>(signal_buffer, VRAM_SEG);
+
+    void *signal_ptr = reinterpret_cast<void *>(static_cast<uintptr_t>(signal_buffer[0]));
+    nixl_status_t status = getAgent(0).initGpuSignal(signal_desc_list, signal_ptr);
+
+    EXPECT_EQ(status, NIXL_SUCCESS)
+        << "initGpuSignal returned unexpected status: " << nixlEnumStrings::statusStr(status);
+
+    deregisterMem(getAgent(0), signal_buffer, VRAM_SEG);
+#endif
 }
 
 INSTANTIATE_TEST_SUITE_P(ucx, TestTransfer, testing::Values(std::make_tuple("UCX", true, 2, 0)));
