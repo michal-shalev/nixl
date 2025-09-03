@@ -59,7 +59,6 @@ class nixlAgentConfig {
          */
         uint64_t etcdWatchTimeoutSec;
 
-
         /**
          * @brief  Agent configuration constructor for enabling various features.
          * @param use_prog_thread    flag to determine use of progress thread
@@ -70,21 +69,21 @@ class nixlAgentConfig {
          * @param lthr_delay_us      Optional delay for listener thread in us
          * @param etcd_watch_timeout_sec Optional timeout for etcd watch operations in seconds
          */
-        nixlAgentConfig (const bool use_prog_thread,
-                         const bool use_listen_thread=false,
-                         const int port=0,
-                         nixl_thread_sync_t sync_mode=nixl_thread_sync_t::NIXL_THREAD_SYNC_DEFAULT,
-                         unsigned int num_workers = 1,
-                         const uint64_t pthr_delay_us=0,
-                         const uint64_t lthr_delay_us = 100000,
-                         const uint64_t etcd_watch_timeout_sec = 5) :
-                         useProgThread(use_prog_thread),
-                         useListenThread(use_listen_thread),
-                         listenPort(port),
-                         syncMode(sync_mode),
-                         pthrDelay(pthr_delay_us),
-                         lthrDelay(lthr_delay_us),
-                         etcdWatchTimeoutSec(etcd_watch_timeout_sec) { }
+        nixlAgentConfig(const bool use_prog_thread,
+                        const bool use_listen_thread = false,
+                        const int port = 0,
+                        nixl_thread_sync_t sync_mode = nixl_thread_sync_t::NIXL_THREAD_SYNC_DEFAULT,
+                        unsigned int num_workers = 1,
+                        const uint64_t pthr_delay_us = 0,
+                        const uint64_t lthr_delay_us = 100000,
+                        const uint64_t etcd_watch_timeout_sec = 5)
+            : useProgThread(use_prog_thread),
+              useListenThread(use_listen_thread),
+              listenPort(port),
+              syncMode(sync_mode),
+              pthrDelay(pthr_delay_us),
+              lthrDelay(lthr_delay_us),
+              etcdWatchTimeoutSec(etcd_watch_timeout_sec) {}
 
         /**
          * @brief Copy constructor for nixlAgentConfig object

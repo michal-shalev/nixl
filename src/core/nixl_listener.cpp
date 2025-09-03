@@ -198,7 +198,7 @@ private:
     }
 
 public:
-    nixlEtcdClient(const std::string& my_agent_name, uint64_t timeout_sec = 5)
+    nixlEtcdClient(const std::string &my_agent_name, uint64_t timeout_sec = 5)
         : watch_timeout_sec(timeout_sec) {
         const char* etcd_endpoints = std::getenv("NIXL_ETCD_ENDPOINTS");
         if (!etcd_endpoints || strlen(etcd_endpoints) == 0) {
