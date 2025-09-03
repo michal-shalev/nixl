@@ -187,6 +187,7 @@ private:
     std::mutex invalidated_agents_mutex;
     std::unordered_map<std::string, std::unique_ptr<etcd::Watcher>,
                         std::hash<std::string>, strEqual> agentWatchers;
+    uint64_t watch_timeout_sec;
 
     // Helper function to create etcd key
     std::string makeKey(const std::string& agent_name,
@@ -197,7 +198,8 @@ private:
     }
 
 public:
-    nixlEtcdClient(const std::string& my_agent_name) {
+    nixlEtcdClient(const std::string& my_agent_name, uint64_t timeout_sec = 5)
+        : watch_timeout_sec(timeout_sec) {
         const char* etcd_endpoints = std::getenv("NIXL_ETCD_ENDPOINTS");
         if (!etcd_endpoints || strlen(etcd_endpoints) == 0) {
             throw std::runtime_error("No etcd endpoints provided");
@@ -340,7 +342,7 @@ public:
 
             auto watcher = etcd::Watcher(*etcd, metadata_key, watch_index, watcher_callback);
 
-            auto status = future.wait_for(std::chrono::seconds(5));
+            auto status = future.wait_for(std::chrono::seconds(watch_timeout_sec));
             if (status == std::future_status::timeout) {
                 NIXL_ERROR << "Watch timed out for key: " << metadata_key;
                 return NIXL_ERR_BACKEND;
@@ -432,7 +434,7 @@ void nixlAgentData::commWorker(nixlAgent* myAgent){
     std::unique_ptr<nixlEtcdClient> etcdClient = nullptr;
     // useEtcd is set in nixlAgent constructor and is true if NIXL_ETCD_ENDPOINTS is set
     if(useEtcd) {
-        etcdClient = std::make_unique<nixlEtcdClient>(name);
+        etcdClient = std::make_unique<nixlEtcdClient>(name, config.etcdWatchTimeoutSec);
     }
 #endif // HAVE_ETCD
 
