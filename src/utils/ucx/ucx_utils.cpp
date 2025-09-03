@@ -613,6 +613,29 @@ nixlUcxContext::initGpuSignal(const nixlUcxMem &mem, void *signal) const {
 #endif
 }
 
+nixl_status_t
+nixlUcxContext::getGpuSignalSize(size_t &size) const {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    ucp_context_attr_t attr;
+    attr.field_mask = UCP_ATTR_FIELD_DEVICE_COUNTER_SIZE;
+
+    ucs_status_t status = ucp_context_query(ctx, &attr);
+    if (status != UCS_OK) {
+        NIXL_ERROR << "Failed to query UCX context for device counter size: "
+                   << ucs_status_string(status);
+        return ucx_status_to_nixl(status);
+    }
+
+    size = attr.device_counter_size;
+    NIXL_DEBUG << "UCX context reports device counter size: " << size;
+    return NIXL_SUCCESS;
+#else
+    // Suppress unused parameter warnings
+    (void)size;
+    return NIXL_ERR_NOT_SUPPORTED;
+#endif
+}
+
 /* ===========================================
  * Active message handling
  * =========================================== */

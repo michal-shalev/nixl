@@ -194,6 +194,9 @@ public:
     [[nodiscard]] nixl_status_t
     initGpuSignal(const nixlUcxMem &mem, void *signal) const;
 
+    [[nodiscard]] nixl_status_t
+    getGpuSignalSize(size_t &size) const;
+
     friend class nixlUcxWorker;
 };
 

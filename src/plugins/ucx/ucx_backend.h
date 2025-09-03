@@ -127,6 +127,9 @@ public:
     nixl_mem_list_t
     getSupportedMems() const override;
 
+    nixl_b_params_t
+    getCustomParams() const;
+
     /* Object management */
     nixl_status_t
     getPublicData(const nixlBackendMD *meta, std::string &str) const override;

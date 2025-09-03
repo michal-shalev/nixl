@@ -1172,6 +1172,22 @@ nixl_mem_list_t nixlUcxEngine::getSupportedMems () const {
     return mems;
 }
 
+nixl_b_params_t
+nixlUcxEngine::getCustomParams() const {
+    nixl_b_params_t params = nixlBackendEngine::getCustomParams();
+    if (uc) {
+        size_t signal_size;
+        nixl_status_t ret = uc->getGpuSignalSize(signal_size);
+        if (ret == NIXL_SUCCESS) {
+            params["gpu_signal_size"] = std::to_string(signal_size);
+        } else {
+            NIXL_ERROR << "UCX backend did not add gpu_signal_size due to error";
+        }
+    }
+
+    return params;
+}
+
 static std::unordered_map<const nixlUcxEngine *, size_t> &
 tlsSharedWorkerMap() {
     static thread_local std::unordered_map<const nixlUcxEngine *, size_t> map;
