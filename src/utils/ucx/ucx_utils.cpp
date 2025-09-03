@@ -628,22 +628,18 @@ nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
 #endif
 }
 
-nixl_status_t
-nixlUcxContext::getGpuSignalSize(size_t &size) const {
+size_t
+nixlUcxContext::getGpuSignalSize() const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     // Return the cached value that was queried during initialization
     if (device_counter_size == 0) {
         NIXL_ERROR << "Device counter size was not successfully cached during initialization";
-        return NIXL_ERR_BACKEND;
+        throw std::runtime_error("Device counter size was not successfully cached during initialization");
     }
 
-    size = device_counter_size;
-    NIXL_DEBUG << "Returning cached UCX device counter size: " << size;
-    return NIXL_SUCCESS;
+    return device_counter_size;
 #else
-    // Suppress unused parameter warnings
-    (void)size;
-    return NIXL_ERR_NOT_SUPPORTED;
+    throw std::runtime_error("GPU signal functionality is not available - UCX was not compiled with GPU device API support");
 #endif
 }
 

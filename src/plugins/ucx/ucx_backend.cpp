@@ -1176,13 +1176,8 @@ nixl_b_params_t
 nixlUcxEngine::getCustomParams() const {
     nixl_b_params_t params = nixlBackendEngine::getCustomParams();
     if (uc) {
-        size_t signal_size;
-        nixl_status_t ret = uc->getGpuSignalSize(signal_size);
-        if (ret == NIXL_SUCCESS) {
-            params["gpu_signal_size"] = std::to_string(signal_size);
-        } else {
-            NIXL_ERROR << "UCX backend did not add gpu_signal_size due to error";
-        }
+        size_t signal_size = uc->getGpuSignalSize();
+        params["gpu_signal_size"] = std::to_string(signal_size);
     }
 
     return params;
