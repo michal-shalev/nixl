@@ -340,9 +340,9 @@ class nixlAgent {
         /**
          * @brief  Prepare a signal for GPU transfer.
          *
-         * The caller must allocate the signal memory before calling this function.
-         * Use @ref getBackendParams to query the required signal size and allocate
-         * the signal accordingly.
+         * The caller must allocate and register the signal memory before calling this function.
+         * Use @ref getBackendParams to query the required signal size, allocate
+         * the signal accordingly, and register it using @ref registerMem.
          *
          * @param  signal_descs  [in] Registered descriptor list for the signal memory
          * @return nixl_status_t Error code if call was not successful
