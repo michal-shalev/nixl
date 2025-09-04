@@ -127,9 +127,6 @@ public:
     nixl_mem_list_t
     getSupportedMems() const override;
 
-    nixl_b_params_t
-    getCustomParams() const;
-
     /* Object management */
     nixl_status_t
     getPublicData(const nixlBackendMD *meta, std::string &str) const override;
@@ -198,6 +195,9 @@ public:
 
     void
     releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const override;
+
+    nixl_status_t
+    getGpuSignalSize(size_t &signal_size) const override;
 
     nixl_status_t
     prepGpuSignal(const nixlBackendMD &meta, void *signal) const override;

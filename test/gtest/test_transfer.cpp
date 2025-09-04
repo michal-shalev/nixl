@@ -665,16 +665,10 @@ TEST_P(TestTransfer, PrepGpuSignal) {
 #ifndef HAVE_UCX_GPU_DEVICE_API
     GTEST_SKIP() << "UCX GPU device API not available, skipping test";
 #else
-    nixl_mem_list_t mems;
-    nixl_b_params_t params;
-    nixl_status_t backend_status = getAgent(0).getBackendParams(backend_handles[0], mems, params);
-
-    EXPECT_EQ(backend_status, NIXL_SUCCESS) << "getBackendParams failed";
-
-    size_t gpu_signal_size;
-    auto gpu_signal_it = params.find("gpu_signal_size");
-    ASSERT_NE(gpu_signal_it, params.end()) << "Backend does not report gpu_signal_size parameter";
-    gpu_signal_size = std::stoul(gpu_signal_it->second);
+    size_t gpu_signal_size = 0;
+    nixl_status_t size_status = getAgent(0).getGpuSignalSize(backend_handles[0], gpu_signal_size);
+    ASSERT_EQ(size_status, NIXL_SUCCESS) << "getGpuSignalSize failed";
+    ASSERT_GT(gpu_signal_size, 0) << "GPU signal size is 0";
 
     // Allocate a buffer on the GPU with the size of the signal
     std::vector<MemBuffer> signal_buffer;

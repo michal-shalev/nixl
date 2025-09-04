@@ -452,12 +452,12 @@ nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
     attr.field_mask = UCP_ATTR_FIELD_DEVICE_COUNTER_SIZE;
     ucs_status_t query_status = ucp_context_query(ctx, &attr);
     if (query_status == UCS_OK) {
-        device_counter_size = attr.device_counter_size;
-        NIXL_DEBUG << "Cached UCX device counter size: " << device_counter_size;
+        this->device_counter_size = attr.device_counter_size;
+        NIXL_DEBUG << "Cached UCX device counter size: " << this->device_counter_size;
     } else {
         NIXL_WARN << "Failed to query UCX context for device counter size during initialization: "
                   << ucs_status_string(query_status);
-        device_counter_size = 0;
+        this->device_counter_size = 0;
     }
 #endif
 }
@@ -632,12 +632,12 @@ size_t
 nixlUcxContext::getGpuSignalSize() const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     // Return the cached value that was queried during initialization
-    if (device_counter_size == 0) {
+    if (this->device_counter_size == 0) {
         NIXL_ERROR << "Device counter size was not successfully cached during initialization";
         throw std::runtime_error("Device counter size was not successfully cached during initialization");
     }
 
-    return device_counter_size;
+    return this->device_counter_size;
 #else
     throw std::runtime_error("GPU signal functionality is not available - UCX was not compiled "
                              "with GPU device API support");

@@ -1268,6 +1268,20 @@ nixlAgent::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {
 }
 
 nixl_status_t
+nixlAgent::getGpuSignalSize(const nixlBackendH* backend, size_t &signal_size) const {
+    NIXL_SHARED_LOCK_GUARD(data->lock);
+
+    if (!backend) {
+        NIXL_ERROR_FUNC << "backend handle is not provided";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    // Query the specific backend for GPU signal size
+    nixl_status_t ret = backend->engine->getGpuSignalSize(signal_size);
+    return ret;
+}
+
+nixl_status_t
 nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs) const {
     if (signal_descs.descCount() == 0) {
         NIXL_ERROR_FUNC << "signal descriptor list is empty";

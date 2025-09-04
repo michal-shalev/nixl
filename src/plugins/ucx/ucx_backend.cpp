@@ -1172,17 +1172,6 @@ nixl_mem_list_t nixlUcxEngine::getSupportedMems () const {
     return mems;
 }
 
-nixl_b_params_t
-nixlUcxEngine::getCustomParams() const {
-    nixl_b_params_t params = nixlBackendEngine::getCustomParams();
-    if (uc) {
-        size_t signal_size = uc->getGpuSignalSize();
-        params["gpu_signal_size"] = std::to_string(signal_size);
-    }
-
-    return params;
-}
-
 static std::unordered_map<const nixlUcxEngine *, size_t> &
 tlsSharedWorkerMap() {
     static thread_local std::unordered_map<const nixlUcxEngine *, size_t> map;
@@ -1641,6 +1630,21 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &handle,
 
 void
 nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
+
+nixl_status_t
+nixlUcxEngine::getGpuSignalSize(size_t &signal_size) const {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    try {
+        signal_size = uc->getGpuSignalSize();
+        return NIXL_SUCCESS;
+    } catch (const std::exception &e) {
+        NIXL_ERROR << "Failed to get GPU signal size: " << e.what();
+        return NIXL_ERR_NOT_SUPPORTED;
+    }
+#else
+    return NIXL_ERR_NOT_SUPPORTED;
+#endif
+}
 
 nixl_status_t
 nixlUcxEngine::prepGpuSignal(const nixlBackendMD &meta, void *signal) const {

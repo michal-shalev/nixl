@@ -338,10 +338,24 @@ class nixlAgent {
         releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const;
 
         /**
+         * @brief  Get the size required for a GPU signal.
+         *
+         * This function returns the size required for allocating memory for a GPU signal.
+         * The returned size should be used to allocate memory that will be registered
+         * and used with @ref prepGpuSignal.
+         *
+         * @param  backend       [in] Backend handle to get the size of the GPU signal
+         * @param  signal_size   [out] Size required for the GPU signal
+         * @return nixl_status_t Error code if call was not successful
+         */
+        nixl_status_t
+        getGpuSignalSize(const nixlBackendH* backend, size_t &signal_size) const;
+
+        /**
          * @brief  Prepare a signal for GPU transfer.
          *
          * The caller must allocate and register the signal memory before calling this function.
-         * Use @ref getBackendParams to query the required signal size, allocate
+         * Use @ref getGpuSignalSize to query the required signal size, allocate
          * the signal accordingly, and register it using @ref registerMem.
          *
          * @param  signal_descs  [in] Registered descriptor list for the signal memory
