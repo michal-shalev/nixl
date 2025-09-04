@@ -140,7 +140,7 @@ class nixl_agent_config:
         listen_port: int = 0,
         num_threads: int = 0,
         backends: list[str] = ["UCX"],
-        etcd_watch_timeout: float = 5000000.0,
+        etcd_watch_timeout: int = 5000000,
     ):
         # TODO: add backend init parameters
         self.backends = backends
@@ -192,9 +192,7 @@ class nixl_agent:
             nixl_conf.num_threads,
             0,  # pthr_delay_us
             100000,  # lthr_delay_us
-            int(
-                nixl_conf.etcd_watch_timeout
-            ),  # Convert to int microseconds for C++ API
+            nixl_conf.etcd_watch_timeout,
         )
         self.agent = nixlBind.nixlAgent(agent_name, agent_config)
 
