@@ -662,7 +662,9 @@ TEST_P(TestTransfer, GetXferTelemetryDisabled) {
 }
 
 TEST_P(TestTransfer, PrepGpuSignal) {
-#ifdef HAVE_UCX_GPU_DEVICE_API
+#ifndef HAVE_UCX_GPU_DEVICE_API
+    GTEST_SKIP() << "UCX GPU device API not available, skipping test";
+#else
     nixl_mem_list_t mems;
     nixl_b_params_t params;
     nixl_status_t backend_status = getAgent(0).getBackendParams(backend_handles[0], mems, params);
