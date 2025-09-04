@@ -192,7 +192,9 @@ class nixl_agent:
             nixl_conf.num_threads,
             0,  # pthr_delay_us
             100000,  # lthr_delay_us
-            int(nixl_conf.etcd_watch_timeout),  # Convert to int microseconds for C++ API
+            int(
+                nixl_conf.etcd_watch_timeout
+            ),  # Convert to int microseconds for C++ API
         )
         self.agent = nixlBind.nixlAgent(agent_name, agent_config)
 
