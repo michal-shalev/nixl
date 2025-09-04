@@ -639,7 +639,8 @@ nixlUcxContext::getGpuSignalSize() const {
 
     return device_counter_size;
 #else
-    throw std::runtime_error("GPU signal functionality is not available - UCX was not compiled with GPU device API support");
+    throw std::runtime_error("GPU signal functionality is not available - UCX was not compiled "
+                             "with GPU device API support");
 #endif
 }
 
