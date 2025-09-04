@@ -76,7 +76,8 @@ class nixlAgentConfig {
                         unsigned int num_workers = 1,
                         const uint64_t pthr_delay_us = 0,
                         const uint64_t lthr_delay_us = 100000,
-                        const std::chrono::microseconds &etcd_watch_timeout = std::chrono::microseconds(5000000))
+                        const std::chrono::microseconds &etcd_watch_timeout =
+                            std::chrono::microseconds(5000000))
             : useProgThread(use_prog_thread),
               useListenThread(use_listen_thread),
               listenPort(port),
