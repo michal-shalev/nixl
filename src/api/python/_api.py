@@ -124,7 +124,7 @@ nixl_backend_handle = int
 @param enable_prog_thread Whether to enable the progress thread, if available.
 @param enable_listen_thread Whether to enable the listener thread for metadata communication.
 @param listen_port Specify the port for the listener thread to listen on.
-@param etcd_watch_timeout Timeout in seconds for etcd watch operations.
+@param etcd_watch_timeout Timeout in microseconds for etcd watch operations.
 
 @param backends List of backend names for agent to initialize.
         Default is UCX, other backends can be added to the list, or after
@@ -140,7 +140,7 @@ class nixl_agent_config:
         listen_port: int = 0,
         num_threads: int = 0,
         backends: list[str] = ["UCX"],
-        etcd_watch_timeout: int = 5,
+        etcd_watch_timeout: float = 5000000.0,
     ):
         # TODO: add backend init parameters
         self.backends = backends
@@ -189,6 +189,10 @@ class nixl_agent:
             nixl_conf.enable_listen,
             nixl_conf.port,
             thread_config,
+            nixl_conf.num_threads,
+            0,  # pthr_delay_us
+            100000,  # lthr_delay_us
+            int(nixl_conf.etcd_watch_timeout),  # Convert to int microseconds for C++ API
         )
         self.agent = nixlBind.nixlAgent(agent_name, agent_config)
 
