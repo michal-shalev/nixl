@@ -344,12 +344,12 @@ class nixlAgent {
          * The returned size should be used to allocate memory that will be registered
          * and used with @ref prepGpuSignal.
          *
-         * @param  backend       [in] Backend handle to get the size of the GPU signal
+         * @param  backend       [in]  Backend handle to get the size of the GPU signal
          * @param  signal_size   [out] Size required for the GPU signal
          * @return nixl_status_t Error code if call was not successful
          */
         nixl_status_t
-        getGpuSignalSize(const nixlBackendH *backend, size_t &signal_size) const;
+        getGpuSignalSize(const nixlBackendH &backend, size_t &signal_size) const;
 
         /**
          * @brief  Prepare a signal for GPU transfer.

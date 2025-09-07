@@ -173,9 +173,6 @@ private:
     /* Local UCX stuff */
     ucp_context_h ctx;
     nixl_ucx_mt_t mt_type;
-#ifdef HAVE_UCX_GPU_DEVICE_API
-    size_t device_counter_size{0};
-#endif
 public:
 
     using req_cb_t = void(void *request);

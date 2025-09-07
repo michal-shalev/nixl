@@ -1634,13 +1634,17 @@ nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
 nixl_status_t
 nixlUcxEngine::getGpuSignalSize(size_t &signal_size) const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
-    try {
-        signal_size = uc->getGpuSignalSize();
+    if (gpuSignalSize_) {
+        signal_size = *gpuSignalSize_;
         return NIXL_SUCCESS;
     }
-    catch (const std::exception &e) {
-        NIXL_ERROR << "Failed to get GPU signal size: " << e.what();
-        return NIXL_ERR_NOT_SUPPORTED;
+
+    try {
+        gpuSignalSize_ = signal_size = uc->getGpuSignalSize();
+        return NIXL_SUCCESS;
+    } catch (const std::exception &e) {
+        NIXL_ERROR << e.what();
+        return NIXL_ERR_BACKEND;
     }
 #else
     return NIXL_ERR_NOT_SUPPORTED;

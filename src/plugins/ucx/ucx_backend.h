@@ -27,6 +27,7 @@
 #include <atomic>
 #include <chrono>
 #include <poll.h>
+#include <optional>
 
 #include "nixl.h"
 #include "backend/backend_engine.h"
@@ -292,6 +293,7 @@ private:
     /* CUDA data*/
     std::unique_ptr<nixlUcxCudaCtx> cudaCtx; // Context matching specific device
     bool cuda_addr_wa;
+    mutable std::optional<size_t> gpuSignalSize_;
 
     // Context to use when current context is missing
     nixlUcxCudaDevicePrimaryCtxPtr m_cudaPrimaryCtx;

@@ -445,21 +445,6 @@ nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
         throw std::runtime_error ("Failed to create UCX context: " +
                                   std::string (ucs_status_string (status)));
     }
-
-#ifdef HAVE_UCX_GPU_DEVICE_API
-    // Cache the device counter size once during initialization
-    ucp_context_attr_t attr;
-    attr.field_mask = UCP_ATTR_FIELD_DEVICE_COUNTER_SIZE;
-    ucs_status_t query_status = ucp_context_query(ctx, &attr);
-    if (query_status == UCS_OK) {
-        this->device_counter_size = attr.device_counter_size;
-        NIXL_DEBUG << "Cached UCX device counter size: " << this->device_counter_size;
-    } else {
-        NIXL_WARN << "Failed to query UCX context for device counter size during initialization: "
-                  << ucs_status_string(query_status);
-        this->device_counter_size = 0;
-    }
-#endif
 }
 
 nixlUcxContext::~nixlUcxContext()
@@ -631,14 +616,16 @@ nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
 size_t
 nixlUcxContext::getGpuSignalSize() const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
-    // Return the cached value that was queried during initialization
-    if (this->device_counter_size == 0) {
-        NIXL_ERROR << "Device counter size was not successfully cached during initialization";
-        throw std::runtime_error(
-            "Device counter size was not successfully cached during initialization");
+    ucp_context_attr_t attr;
+    attr.field_mask = UCP_ATTR_FIELD_DEVICE_COUNTER_SIZE;
+    ucs_status_t query_status = ucp_context_query(ctx, &attr);
+
+    if (query_status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to query UCX context for device counter size: ") +
+                                 ucs_status_string(query_status));
     }
 
-    return this->device_counter_size;
+    return attr.device_counter_size;
 #else
     throw std::runtime_error("GPU signal functionality is not available - UCX was not compiled "
                              "with GPU device API support");
