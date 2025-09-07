@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import pickle
+from datetime import timedelta
 from typing import Optional, Union
 
 import numpy as np
