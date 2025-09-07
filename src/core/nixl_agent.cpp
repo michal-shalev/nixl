@@ -1253,7 +1253,7 @@ nixlAgent::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {
 }
 
 nixl_status_t
-nixlAgent::getGpuSignalSize(const nixlBackendH* backend, size_t &signal_size) const {
+nixlAgent::getGpuSignalSize(const nixlBackendH *backend, size_t &signal_size) const {
     NIXL_SHARED_LOCK_GUARD(data->lock);
 
     if (!backend) {

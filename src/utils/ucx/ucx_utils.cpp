@@ -634,7 +634,8 @@ nixlUcxContext::getGpuSignalSize() const {
     // Return the cached value that was queried during initialization
     if (this->device_counter_size == 0) {
         NIXL_ERROR << "Device counter size was not successfully cached during initialization";
-        throw std::runtime_error("Device counter size was not successfully cached during initialization");
+        throw std::runtime_error(
+            "Device counter size was not successfully cached during initialization");
     }
 
     return this->device_counter_size;

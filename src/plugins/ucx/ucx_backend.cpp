@@ -1637,7 +1637,8 @@ nixlUcxEngine::getGpuSignalSize(size_t &signal_size) const {
     try {
         signal_size = uc->getGpuSignalSize();
         return NIXL_SUCCESS;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e) {
         NIXL_ERROR << "Failed to get GPU signal size: " << e.what();
         return NIXL_ERR_NOT_SUPPORTED;
     }

@@ -349,7 +349,7 @@ class nixlAgent {
          * @return nixl_status_t Error code if call was not successful
          */
         nixl_status_t
-        getGpuSignalSize(const nixlBackendH* backend, size_t &signal_size) const;
+        getGpuSignalSize(const nixlBackendH *backend, size_t &signal_size) const;
 
         /**
          * @brief  Prepare a signal for GPU transfer.
