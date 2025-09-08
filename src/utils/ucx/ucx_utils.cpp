@@ -26,6 +26,13 @@
 
 #include <nixl_types.h>
 
+extern "C"
+{
+#ifdef HAVE_UCX_GPU_DEVICE_API
+#include <ucp/api/device/ucp_host.h>
+#endif
+}
+
 #include "common/nixl_log.h"
 #include "config.h"
 #include "serdes/serdes.h"
@@ -589,14 +596,13 @@ void nixlUcxContext::memDereg(nixlUcxMem &mem)
     ucp_mem_unmap(ctx, mem.memh);
 }
 
-nixl_status_t
+void
 nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     if (!signal) {
-        return NIXL_ERR_INVALID_PARAM;
+        throw std::invalid_argument("Signal pointer cannot be null");
     }
 
-    // Set up parameters for UCX device counter initialization
     ucp_device_counter_init_params_t params;
     params.field_mask = UCP_DEVICE_COUNTER_INIT_PARAMS_FIELD_MEMH;
     params.memh = mem.memh;
@@ -604,12 +610,16 @@ nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
     // Initialize the GPU signal using UCX
     ucs_status_t status = ucp_device_counter_init(ctx, &params, signal);
 
-    return ucx_status_to_nixl(status);
+    if (status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to initialize GPU signal: ") +
+                                 ucs_status_string(status));
+    }
 #else
     // Suppress unused parameter warnings
     (void)mem;
     (void)signal;
-    return NIXL_ERR_NOT_SUPPORTED;
+    throw std::runtime_error("GPU signal functionality is not supported - UCX was not compiled "
+                             "with GPU device API support");
 #endif
 }
 

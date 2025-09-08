@@ -1633,7 +1633,6 @@ nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH *gpu_req_hndl) const {}
 
 nixl_status_t
 nixlUcxEngine::getGpuSignalSize(size_t &signal_size) const {
-#ifdef HAVE_UCX_GPU_DEVICE_API
     if (gpuSignalSize_) {
         signal_size = *gpuSignalSize_;
         return NIXL_SUCCESS;
@@ -1647,21 +1646,18 @@ nixlUcxEngine::getGpuSignalSize(size_t &signal_size) const {
         NIXL_ERROR << e.what();
         return NIXL_ERR_BACKEND;
     }
-#else
-    return NIXL_ERR_NOT_SUPPORTED;
-#endif
 }
 
 nixl_status_t
 nixlUcxEngine::prepGpuSignal(const nixlBackendMD &meta, void *signal) const {
-    if (!signal) {
-        NIXL_ERROR << "Invalid signal pointer";
-        return NIXL_ERR_INVALID_PARAM;
+    try {
+        const nixlUcxPrivateMetadata *ucx_meta = static_cast<const nixlUcxPrivateMetadata *>(&meta);
+        uc->prepGpuSignal(ucx_meta->mem, signal);
+        return NIXL_SUCCESS;
+    } catch (const std::exception &e) {
+        NIXL_ERROR << "Error in prepGpuSignal: " << e.what();
+        return NIXL_ERR_BACKEND;
     }
-
-    const nixlUcxPrivateMetadata *ucx_meta = static_cast<const nixlUcxPrivateMetadata *>(&meta);
-
-    return uc->prepGpuSignal(ucx_meta->mem, signal);
 }
 
 int nixlUcxEngine::progress() {
