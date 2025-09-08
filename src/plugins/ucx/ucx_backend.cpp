@@ -1654,7 +1654,8 @@ nixlUcxEngine::prepGpuSignal(const nixlBackendMD &meta, void *signal) const {
         const nixlUcxPrivateMetadata *ucx_meta = static_cast<const nixlUcxPrivateMetadata *>(&meta);
         uc->prepGpuSignal(ucx_meta->mem, signal);
         return NIXL_SUCCESS;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e) {
         NIXL_ERROR << "Error in prepGpuSignal: " << e.what();
         return NIXL_ERR_BACKEND;
     }

@@ -26,8 +26,7 @@
 
 #include <nixl_types.h>
 
-extern "C"
-{
+extern "C" {
 #ifdef HAVE_UCX_GPU_DEVICE_API
 #include <ucp/api/device/ucp_host.h>
 #endif
