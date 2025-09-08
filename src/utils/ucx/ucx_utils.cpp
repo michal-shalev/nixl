@@ -622,9 +622,6 @@ nixlUcxContext::prepGpuSignal([[maybe_unused]] const nixlUcxMem &mem,
                                  ucs_status_string(status));
     }
 #else
-    // Suppress unused parameter warnings
-    (void)mem;
-    (void)signal;
     throw std::runtime_error(std::string(ucxGpuDeviceApiUnsupported));
 #endif
 }
