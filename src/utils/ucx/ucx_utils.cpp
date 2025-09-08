@@ -621,8 +621,9 @@ nixlUcxContext::getGpuSignalSize() const {
     ucs_status_t query_status = ucp_context_query(ctx, &attr);
 
     if (query_status != UCS_OK) {
-        throw std::runtime_error(std::string("Failed to query UCX context for device counter size: ") +
-                                 ucs_status_string(query_status));
+        throw std::runtime_error(
+            std::string("Failed to query UCX context for device counter size: ") +
+            ucs_status_string(query_status));
     }
 
     return attr.device_counter_size;
