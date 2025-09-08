@@ -595,8 +595,14 @@ void nixlUcxContext::memDereg(nixlUcxMem &mem)
     ucp_mem_unmap(ctx, mem.memh);
 }
 
+#ifndef HAVE_UCX_GPU_DEVICE_API
+namespace {
+    constexpr std::string_view ucxGpuDeviceApiUnsupported{"UCX was not compiled with GPU device API support"};
+}
+#endif
+
 void
-nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
+nixlUcxContext::prepGpuSignal([[maybe_unused]] const nixlUcxMem &mem, [[maybe_unused]] void *signal) const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     if (!signal) {
         throw std::invalid_argument("Signal pointer cannot be null");
@@ -617,8 +623,7 @@ nixlUcxContext::prepGpuSignal(const nixlUcxMem &mem, void *signal) const {
     // Suppress unused parameter warnings
     (void)mem;
     (void)signal;
-    throw std::runtime_error("GPU signal functionality is not supported - UCX was not compiled "
-                             "with GPU device API support");
+    throw std::runtime_error(std::string(ucxGpuDeviceApiUnsupported));
 #endif
 }
 
@@ -637,8 +642,7 @@ nixlUcxContext::getGpuSignalSize() const {
 
     return attr.device_counter_size;
 #else
-    throw std::runtime_error("GPU signal functionality is not available - UCX was not compiled "
-                             "with GPU device API support");
+    throw std::runtime_error(std::string(ucxGpuDeviceApiUnsupported));
 #endif
 }
 

@@ -1278,7 +1278,7 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs) const {
     }
 
     // Try each backend to find the signal metadata
-    for (auto &backend : *backends) {
+    for (const auto &backend : *backends) {
         nixl_meta_dlist_t result(signal_descs.getType());
         nixl_status_t ret = data->memorySection->populate(xfer_descs, backend, result);
 
@@ -1286,11 +1286,7 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs) const {
             void *signal = reinterpret_cast<void *>(result[0].addr);
             ret = backend->prepGpuSignal(*result[0].metadataP, signal);
 
-            if (ret == NIXL_SUCCESS) {
-                return NIXL_SUCCESS;
-            } else if (ret != NIXL_ERR_NOT_SUPPORTED) {
-                NIXL_ERROR_FUNC << "backend '" << backend->getType()
-                                << "' failed to prepare GPU signal with status " << ret;
+            if ((ret == NIXL_SUCCESS) || (ret != NIXL_ERR_NOT_SUPPORTED)) {
                 return ret;
             }
         }
