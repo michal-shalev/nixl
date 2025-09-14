@@ -352,6 +352,9 @@ private:
     };
     std::optional<Notif> notif;
 
+    std::unique_ptr<nixl_meta_dlist_t> storedLocalDescs_;
+    std::unique_ptr<nixl_meta_dlist_t> storedRemoteDescs_;
+
 public:
     auto& notification() {
         return notif;
@@ -436,6 +439,19 @@ public:
         }
         requests_.resize(incomplete_reqs);
         return out_ret;
+    }
+
+    void storeDescriptorLists(const nixl_meta_dlist_t &local, const nixl_meta_dlist_t &remote) {
+        storedLocalDescs_ = std::make_unique<nixl_meta_dlist_t>(local);
+        storedRemoteDescs_ = std::make_unique<nixl_meta_dlist_t>(remote);
+    }
+
+    const nixl_meta_dlist_t* getLocalDescs() const {
+        return storedLocalDescs_.get();
+    }
+
+    const nixl_meta_dlist_t* getRemoteDescs() const {
+        return storedRemoteDescs_.get();
     }
 
     void
@@ -1412,7 +1428,12 @@ nixl_status_t nixlUcxEngine::prepXfer (const nixl_xfer_op_t &operation,
 
     /* TODO: try to get from a pool first */
     size_t worker_id = getWorkerId();
-    handle = new nixlUcxBackendH(getWorker(worker_id).get(), worker_id);
+    auto* ucx_handle = new nixlUcxBackendH(getWorker(worker_id).get(), worker_id);
+
+    ucx_handle->storeDescriptorLists(local, remote);
+
+    handle = ucx_handle;
+
     return NIXL_SUCCESS;
 }
 
@@ -1623,13 +1644,108 @@ nixl_status_t nixlUcxEngine::releaseReqH(nixlBackendReqH* handle) const
 }
 
 nixl_status_t
-nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &handle,
-                                nixlGpuXferReqH &gpu_req_hndl) const {
+nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl, nixlGpuXferReqH &gpu_req_hndl) const {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    auto *intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
+    size_t workerId = intHandle->getWorkerId();
+
+    if (remoteConnMap.empty()) {
+        NIXL_ERROR << "No remote connections found";
+        return NIXL_ERR_NOT_FOUND;
+    }
+
+    std::string remote_agent = remoteConnMap.begin()->second->getRemoteAgent();
+    auto search = remoteConnMap.find(remote_agent);
+
+    if(search == remoteConnMap.end()) {
+        NIXL_ERROR << "Remote connection not found";
+        return NIXL_ERR_NOT_FOUND;
+    }
+
+    nixlUcxEp *ep = search->second->getEp(workerId).get();
+
+    const nixl_meta_dlist_t* localDescs = intHandle->getLocalDescs();
+    const nixl_meta_dlist_t* remoteDescs = intHandle->getRemoteDescs();
+
+    if (!localDescs || !remoteDescs) {
+        NIXL_ERROR << "No descriptor lists stored in backend handle - prepXfer must be called first";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    if (localDescs->descCount() != remoteDescs->descCount()) {
+        NIXL_ERROR << "Mismatch between local and remote descriptor counts";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    std::vector<nixlUcxDeviceMemElem> elements;
+    elements.reserve(localDescs->descCount());
+
+    for (size_t i = 0; i < static_cast<size_t>(localDescs->descCount()); i++) {
+        const auto& localDesc = (*localDescs)[i];
+        const auto& remoteDesc = (*remoteDescs)[i];
+
+        nixlUcxPrivateMetadata* localMd = (nixlUcxPrivateMetadata*)localDesc.metadataP;
+        nixlUcxPublicMetadata* remoteMd = (nixlUcxPublicMetadata*)remoteDesc.metadataP;
+
+        nixlUcxDeviceMemElem elem;
+        elem.mem = localMd->mem;
+        elem.rkey = &remoteMd->getRkey(workerId);
+        elem.local_addr = (void*)localDesc.addr;
+        elem.remote_addr = remoteDesc.addr;
+        elem.length = localDesc.len;
+
+        elements.push_back(elem);
+    }
+
+    nixlUcxDeviceMemListH mem_list_handle;
+    try {
+        ep->createMemList(elements, mem_list_handle);
+    } catch (const std::exception &e) {
+        NIXL_ERROR << "Failed to create device memory list for GPU transfer: " << e.what();
+        return NIXL_ERR_BACKEND;
+    }
+
+    gpu_req_hndl = reinterpret_cast<nixlGpuXferReqH>(mem_list_handle);
+
+    return NIXL_SUCCESS;
+#else
     return NIXL_ERR_NOT_SUPPORTED;
+#endif
 }
 
 void
-nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {}
+nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    if (gpu_req_hndl == nullptr) {
+        NIXL_WARN << "Attempting to release null GPU transfer request handle";
+        return;
+    }
+
+    if (remoteConnMap.empty()) {
+        NIXL_WARN << "No remote connections available for GPU handle release";
+        return;
+    }
+
+    std::string remote_agent = remoteConnMap.begin()->second->getRemoteAgent();
+    auto search = remoteConnMap.find(remote_agent);
+    if (search == remoteConnMap.end()) {
+        NIXL_WARN << "Remote connection not found for GPU handle release";
+        return;
+    }
+
+    nixlUcxEp *ep = search->second->getEp(0).get();
+
+    nixlUcxDeviceMemListH mem_list_handle = reinterpret_cast<nixlUcxDeviceMemListH>(gpu_req_hndl);
+    try {
+        ep->releaseMemList(mem_list_handle);
+        NIXL_DEBUG << "GPU transfer request released";
+    } catch (const std::exception &e) {
+        NIXL_WARN << "Failed to release GPU transfer request: " << e.what();
+    }
+#else
+    NIXL_WARN << "UCX GPU device API not supported";
+#endif
+}
 
 nixl_status_t
 nixlUcxEngine::getGpuSignalSize(size_t &signal_size) const {

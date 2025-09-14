@@ -50,6 +50,10 @@ class nixlUcxConnection : public nixlBackendConnMD {
             return eps[ep_id];
         }
 
+        [[nodiscard]] const std::string& getRemoteAgent() const noexcept {
+            return remoteAgent;
+        }
+
     friend class nixlUcxEngine;
 };
 
@@ -192,7 +196,7 @@ public:
     releaseReqH(nixlBackendReqH *handle) const override;
 
     nixl_status_t
-    createGpuXferReq(const nixlBackendReqH &handle, nixlGpuXferReqH &gpu_req_hndl) const override;
+    createGpuXferReq(const nixlBackendReqH &req_hndl, nixlGpuXferReqH &gpu_req_hndl) const override;
 
     void
     releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const override;

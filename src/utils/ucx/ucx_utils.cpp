@@ -397,6 +397,10 @@ nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
 
     ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED;
     ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64 | UCP_FEATURE_AM;
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    ucp_params.features |= UCP_FEATURE_DEVICE;
+#endif
+
     if (prog_thread)
         ucp_params.features |= UCP_FEATURE_WAKEUP;
     ucp_params.mt_workers_shared = num_workers > 1 ? 1 : 0;
@@ -714,4 +718,71 @@ nixlUcxWorker::getEfd() const {
         throw std::runtime_error(err_str);
     }
     return fd;
+}
+
+/* ===========================================
+ * GPU Memory List Management
+ * =========================================== */
+
+void
+nixlUcxEp::createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
+                         nixlUcxDeviceMemListH &mem_list_handle) {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    nixl_status_t status = checkTxState();
+    if (status != NIXL_SUCCESS) {
+        throw std::runtime_error("Endpoint not in valid state for creating memory list");
+    }
+
+    if (elements.empty()) {
+        throw std::invalid_argument("Empty memory list elements provided");
+    }
+
+    std::vector<ucp_device_mem_list_elem_t> ucp_elements;
+    ucp_elements.reserve(elements.size());
+
+    for (const auto &elem : elements) {
+        ucp_device_mem_list_elem_t ucp_elem = {};
+        ucp_elem.field_mask = UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH |
+                              UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY;
+        ucp_elem.memh = elem.mem.memh;
+        ucp_elem.rkey = elem.rkey->get();
+        ucp_elements.push_back(ucp_elem);
+    }
+
+    ucp_device_mem_list_params_t params = {};
+    params.field_mask = UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENTS |
+                        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENT_SIZE |
+                        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_NUM_ELEMENTS;
+    params.elements = ucp_elements.data();
+    params.element_size = sizeof(ucp_device_mem_list_elem_t);
+    params.num_elements = ucp_elements.size();
+
+    ucp_device_mem_list_handle_h ucx_handle;
+    ucs_status_t ucs_status = ucp_device_mem_list_create(eph, &params, &ucx_handle);
+    if (ucs_status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to create device memory list: ") +
+                                 ucs_status_string(ucs_status));
+    }
+
+    mem_list_handle = reinterpret_cast<nixlUcxDeviceMemListH>(ucx_handle);
+
+    NIXL_DEBUG << "Created device memory list handle with " << elements.size() << " elements";
+#else
+    throw std::runtime_error(std::string(ucxGpuDeviceApiUnsupported));
+#endif
+}
+
+void nixlUcxEp::releaseMemList(nixlUcxDeviceMemListH mem_list_handle) {
+#ifdef HAVE_UCX_GPU_DEVICE_API
+    if (mem_list_handle == nullptr) {
+        throw std::invalid_argument("Attempting to release null device memory list handle");
+    }
+
+    ucp_device_mem_list_handle_h ucx_handle = reinterpret_cast<ucp_device_mem_list_handle_h>(mem_list_handle);
+    ucp_device_mem_list_release(ucx_handle);
+
+    NIXL_DEBUG << "Device memory list handle released";
+#else
+    throw std::runtime_error(std::string(ucxGpuDeviceApiUnsupported));
+#endif
 }
