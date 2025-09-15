@@ -1635,26 +1635,24 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
 #ifdef HAVE_UCX_GPU_DEVICE_API
     auto intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
 
-    if (remoteConnMap.empty()) {
-        NIXL_ERROR << "No remote connections found";
-        return NIXL_ERR_NOT_FOUND;
-    }
-
-    std::string remote_agent = remoteConnMap.begin()->second->getRemoteAgent();
-    auto search = remoteConnMap.find(remote_agent);
-
-    if (search == remoteConnMap.end()) {
-        NIXL_ERROR << "Remote connection not found";
-        return NIXL_ERR_NOT_FOUND;
-    }
-
-    size_t workerId = intHandle->getWorkerId();
-    nixlUcxEp *ep = search->second->getEp(workerId).get();
-
     if (local_descs.descCount() != remote_descs.descCount()) {
         NIXL_ERROR << "Mismatch between local and remote descriptor counts";
         return NIXL_ERR_INVALID_PARAM;
     }
+
+    if (local_descs.descCount() == 0) {
+        NIXL_ERROR << "Empty descriptor lists";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    auto remoteMd = static_cast<nixlUcxPublicMetadata *>(remote_descs[0].metadataP);
+    if (!remoteMd || !remoteMd->conn) {
+        NIXL_ERROR << "No connection found in remote metadata";
+        return NIXL_ERR_NOT_FOUND;
+    }
+
+    size_t workerId = intHandle->getWorkerId();
+    nixlUcxEp *ep = remoteMd->conn->getEp(workerId).get();
 
     std::vector<nixlUcxDeviceMemElem> elements;
     elements.reserve(local_descs.descCount());
@@ -1665,11 +1663,11 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
 
         nixlUcxPrivateMetadata *localMd =
             static_cast<nixlUcxPrivateMetadata *>(localDesc.metadataP);
-        nixlUcxPublicMetadata *remoteMd =
+        nixlUcxPublicMetadata *remoteDescMd =
             static_cast<nixlUcxPublicMetadata *>(remoteDesc.metadataP);
 
         elements.emplace_back(nixlUcxDeviceMemElem{localMd->mem,
-                                                   &remoteMd->getRkey(workerId),
+                                                   &remoteDescMd->getRkey(workerId),
                                                    reinterpret_cast<void *>(localDesc.addr),
                                                    remoteDesc.addr,
                                                    localDesc.len});
