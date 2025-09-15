@@ -1229,7 +1229,10 @@ nixlAgent::createGpuXferReq(const nixlXferReqH &req_hndl, nixlGpuXferReqH &gpu_r
     }
 
     NIXL_SHARED_LOCK_GUARD(data->lock);
-    const auto status = req_hndl.engine->createGpuXferReq(*req_hndl.backendHandle, gpu_req_hndl);
+    const auto status = req_hndl.engine->createGpuXferReq(*req_hndl.backendHandle,
+                                                          *req_hndl.initiatorDescs,
+                                                          *req_hndl.targetDescs,
+                                                          gpu_req_hndl);
     if (status == NIXL_SUCCESS) {
         data->gpuReqToEngine.emplace(gpu_req_hndl, req_hndl.engine);
     }
