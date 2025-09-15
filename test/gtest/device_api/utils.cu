@@ -5,6 +5,9 @@
 
 #include "utils.cuh"
 
+namespace gtest {
+namespace gpu {
+
 const char *GetGpuXferLevelStr(nixl_gpu_level_t level) {
     switch (level) {
     case nixl_gpu_level_t::WARP:
@@ -44,6 +47,9 @@ void logResults(size_t size,
     printf("Device API Results: %zux%zux%zu=%.0f bytes in %f seconds (%.2f MB/s)\n",
            size, count, num_iters, total_size, total_time, bandwidth);
 }
+
+} // namespace gpu
+} // namespace gtest
 
 nixlAgentConfig DeviceApiTestBase::getConfig() {
     return nixlAgentConfig(true,

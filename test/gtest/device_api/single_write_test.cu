@@ -572,12 +572,15 @@ TEST_P(SingleWriteTest, VariableSizeTest) {
     }
 }
 
+} // namespace gtest::nixl::gpu::single_write
+
+using gtest::nixl::gpu::single_write::SingleWriteTest;
+
 INSTANTIATE_TEST_SUITE_P(
     ucxDeviceApi,
     SingleWriteTest,
-    testing::ValuesIn(_test_levels),
+    testing::ValuesIn(gtest::gpu::_test_levels),
     [](const testing::TestParamInfo<nixl_gpu_level_t> &info) {
-        return std::string("UCX_") + GetGpuXferLevelStr(info.param);
+        return std::string("UCX_") + gtest::gpu::GetGpuXferLevelStr(info.param);
     });
 
-} // namespace gtest::nixl::gpu::single_write

@@ -83,6 +83,9 @@ private:
     size_t size;
 };
 
+namespace gtest {
+namespace gpu {
+
 static const std::vector<nixl_gpu_level_t> _test_levels = {
     nixl_gpu_level_t::BLOCK,
     nixl_gpu_level_t::WARP,
@@ -101,6 +104,9 @@ void logResults(size_t size,
                 size_t num_iters,
                 unsigned long long start_time_cpu,
                 unsigned long long end_time_cpu);
+
+} // namespace gpu
+} // namespace gtest
 
 __device__ inline unsigned long long GetTimeNs() {
     unsigned long long globaltimer;
