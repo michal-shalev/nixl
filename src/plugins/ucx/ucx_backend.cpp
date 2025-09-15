@@ -1151,7 +1151,7 @@ nixlUcxEngine::nixlUcxEngine(const nixlBackendInitParams &init_params)
     const auto err_handling_mode_it =
         custom_params->find(std::string(nixl_ucx_err_handling_param_name));
     if (err_handling_mode_it == custom_params->end()) {
-        err_handling_mode = UCP_ERR_HANDLING_MODE_NONE;
+        err_handling_mode = UCP_ERR_HANDLING_MODE_PEER;
     } else {
         err_handling_mode = ucx_err_mode_from_string(err_handling_mode_it->second);
     }
