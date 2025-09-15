@@ -1252,13 +1252,14 @@ nixlAgent::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
 }
 
 nixl_status_t
-nixlAgent::getGpuSignalSize(size_t &signal_size, const nixl_opt_args_t* extra_params) const {
+nixlAgent::getGpuSignalSize(size_t &signal_size, const nixl_opt_args_t *extra_params) const {
     NIXL_SHARED_LOCK_GUARD(data->lock);
     return extra_params->backends[0]->engine->getGpuSignalSize(signal_size);
 }
 
 nixl_status_t
-nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs, const nixl_opt_args_t* extra_params) const {
+nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs,
+                         const nixl_opt_args_t *extra_params) const {
     if (signal_descs.descCount() == 0) {
         NIXL_ERROR_FUNC << "signal descriptor list is empty";
         return NIXL_ERR_INVALID_PARAM;
@@ -1274,7 +1275,7 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs, const nixl_opt_ar
     // Convert reg_dlist to xfer_dlist for populate call
     nixl_xfer_dlist_t xfer_descs = signal_descs.trim();
 
-    nixlBackendH* backend = extra_params->backends[0];
+    nixlBackendH *backend = extra_params->backends[0];
     nixl_meta_dlist_t result(signal_descs.getType());
     nixl_status_t ret = data->memorySection->populate(xfer_descs, backend->engine, result);
 
@@ -1288,7 +1289,8 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs, const nixl_opt_ar
         ret = backend->engine->prepGpuSignal(*result[i].metadataP, signal);
 
         if (ret != NIXL_SUCCESS) {
-            NIXL_ERROR_FUNC << "failed to prepare GPU signal " << i << " with status: " << nixlEnumStrings::statusStr(ret);
+            NIXL_ERROR_FUNC << "failed to prepare GPU signal " << i
+                            << " with status: " << nixlEnumStrings::statusStr(ret);
             return ret;
         }
 

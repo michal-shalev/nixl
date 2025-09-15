@@ -84,7 +84,7 @@ class rkey;
 }
 class nixlUcxMem;
 
-typedef void* nixlUcxDeviceMemListH;
+typedef void *nixlUcxDeviceMemListH;
 struct nixlUcxDeviceMemElem;
 
 class nixlUcxEp {
@@ -160,7 +160,8 @@ public:
     createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
                   nixlUcxDeviceMemListH &mem_list_handle);
 
-    void releaseMemList(nixlUcxDeviceMemListH mem_list_handle);
+    void
+    releaseMemList(nixlUcxDeviceMemListH mem_list_handle);
 };
 
 class nixlUcxMem {

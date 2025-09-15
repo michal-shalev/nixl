@@ -703,7 +703,7 @@ TEST_P(TestTransfer, PrepGpuSignal) {
     GTEST_SKIP() << "UCX GPU device API not available, skipping test";
 #else
     size_t gpu_signal_size = 0;
-    nixl_opt_args_t extra_params = { .backends = {backend_handles[0]} };
+    nixl_opt_args_t extra_params = {.backends = {backend_handles[0]}};
     nixl_status_t size_status = getAgent(0).getGpuSignalSize(gpu_signal_size, &extra_params);
     ASSERT_EQ(size_status, NIXL_SUCCESS) << "getGpuSignalSize failed";
     ASSERT_GT(gpu_signal_size, 0) << "GPU signal size is 0";

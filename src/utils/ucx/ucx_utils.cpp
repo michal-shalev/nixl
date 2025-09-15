@@ -742,8 +742,8 @@ nixlUcxEp::createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
 
     for (const auto &elem : elements) {
         ucp_device_mem_list_elem_t ucp_elem = {};
-        ucp_elem.field_mask = UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH |
-                              UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY;
+        ucp_elem.field_mask =
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH | UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY;
         ucp_elem.memh = elem.mem.memh;
         ucp_elem.rkey = elem.rkey->get();
         ucp_elements.push_back(ucp_elem);
@@ -751,8 +751,8 @@ nixlUcxEp::createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
 
     ucp_device_mem_list_params_t params = {};
     params.field_mask = UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENTS |
-                        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENT_SIZE |
-                        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_NUM_ELEMENTS;
+        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENT_SIZE |
+        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_NUM_ELEMENTS;
     params.elements = ucp_elements.data();
     params.element_size = sizeof(ucp_device_mem_list_elem_t);
     params.num_elements = ucp_elements.size();
@@ -772,13 +772,15 @@ nixlUcxEp::createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
 #endif
 }
 
-void nixlUcxEp::releaseMemList(nixlUcxDeviceMemListH mem_list_handle) {
+void
+nixlUcxEp::releaseMemList(nixlUcxDeviceMemListH mem_list_handle) {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     if (mem_list_handle == nullptr) {
         throw std::invalid_argument("Attempting to release null device memory list handle");
     }
 
-    ucp_device_mem_list_handle_h ucx_handle = reinterpret_cast<ucp_device_mem_list_handle_h>(mem_list_handle);
+    ucp_device_mem_list_handle_h ucx_handle =
+        reinterpret_cast<ucp_device_mem_list_handle_h>(mem_list_handle);
     ucp_device_mem_list_release(ucx_handle);
 
     NIXL_DEBUG << "Device memory list handle released";

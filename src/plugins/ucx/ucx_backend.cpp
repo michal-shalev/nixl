@@ -441,16 +441,19 @@ public:
         return out_ret;
     }
 
-    void storeDescriptorLists(const nixl_meta_dlist_t &local, const nixl_meta_dlist_t &remote) {
+    void
+    storeDescriptorLists(const nixl_meta_dlist_t &local, const nixl_meta_dlist_t &remote) {
         storedLocalDescs_ = std::make_unique<nixl_meta_dlist_t>(local);
         storedRemoteDescs_ = std::make_unique<nixl_meta_dlist_t>(remote);
     }
 
-    const nixl_meta_dlist_t* getLocalDescs() const {
+    const nixl_meta_dlist_t *
+    getLocalDescs() const {
         return storedLocalDescs_.get();
     }
 
-    const nixl_meta_dlist_t* getRemoteDescs() const {
+    const nixl_meta_dlist_t *
+    getRemoteDescs() const {
         return storedRemoteDescs_.get();
     }
 
@@ -1428,7 +1431,7 @@ nixl_status_t nixlUcxEngine::prepXfer (const nixl_xfer_op_t &operation,
 
     /* TODO: try to get from a pool first */
     size_t worker_id = getWorkerId();
-    auto* ucx_handle = new nixlUcxBackendH(getWorker(worker_id).get(), worker_id);
+    auto *ucx_handle = new nixlUcxBackendH(getWorker(worker_id).get(), worker_id);
 
     ucx_handle->storeDescriptorLists(local, remote);
 
@@ -1575,6 +1578,8 @@ nixlUcxEngine::postXfer(const nixl_xfer_op_t &operation,
 
     // TODO: assert that handle is empty/completed, as we can't post request before completion
 
+    int_handle->storeDescriptorLists(local, remote);
+
     ret = sendXferRange(operation, local, remote, remote_agent, handle, 0, lcnt);
     if (ret != NIXL_SUCCESS) {
         return ret;
@@ -1644,7 +1649,8 @@ nixl_status_t nixlUcxEngine::releaseReqH(nixlBackendReqH* handle) const
 }
 
 nixl_status_t
-nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl, nixlGpuXferReqH &gpu_req_hndl) const {
+nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
+                                nixlGpuXferReqH &gpu_req_hndl) const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
     auto *intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
     size_t workerId = intHandle->getWorkerId();
@@ -1657,18 +1663,19 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl, nixlGpuXferReqH
     std::string remote_agent = remoteConnMap.begin()->second->getRemoteAgent();
     auto search = remoteConnMap.find(remote_agent);
 
-    if(search == remoteConnMap.end()) {
+    if (search == remoteConnMap.end()) {
         NIXL_ERROR << "Remote connection not found";
         return NIXL_ERR_NOT_FOUND;
     }
 
     nixlUcxEp *ep = search->second->getEp(workerId).get();
 
-    const nixl_meta_dlist_t* localDescs = intHandle->getLocalDescs();
-    const nixl_meta_dlist_t* remoteDescs = intHandle->getRemoteDescs();
+    const nixl_meta_dlist_t *localDescs = intHandle->getLocalDescs();
+    const nixl_meta_dlist_t *remoteDescs = intHandle->getRemoteDescs();
 
     if (!localDescs || !remoteDescs) {
-        NIXL_ERROR << "No descriptor lists stored in backend handle - prepXfer must be called first";
+        NIXL_ERROR
+            << "No descriptor lists stored in backend handle - prepXfer must be called first";
         return NIXL_ERR_INVALID_PARAM;
     }
 
@@ -1681,16 +1688,16 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl, nixlGpuXferReqH
     elements.reserve(localDescs->descCount());
 
     for (size_t i = 0; i < static_cast<size_t>(localDescs->descCount()); i++) {
-        const auto& localDesc = (*localDescs)[i];
-        const auto& remoteDesc = (*remoteDescs)[i];
+        const auto &localDesc = (*localDescs)[i];
+        const auto &remoteDesc = (*remoteDescs)[i];
 
-        nixlUcxPrivateMetadata* localMd = (nixlUcxPrivateMetadata*)localDesc.metadataP;
-        nixlUcxPublicMetadata* remoteMd = (nixlUcxPublicMetadata*)remoteDesc.metadataP;
+        nixlUcxPrivateMetadata *localMd = (nixlUcxPrivateMetadata *)localDesc.metadataP;
+        nixlUcxPublicMetadata *remoteMd = (nixlUcxPublicMetadata *)remoteDesc.metadataP;
 
         nixlUcxDeviceMemElem elem;
         elem.mem = localMd->mem;
         elem.rkey = &remoteMd->getRkey(workerId);
-        elem.local_addr = (void*)localDesc.addr;
+        elem.local_addr = (void *)localDesc.addr;
         elem.remote_addr = remoteDesc.addr;
         elem.length = localDesc.len;
 
@@ -1700,7 +1707,8 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl, nixlGpuXferReqH
     nixlUcxDeviceMemListH mem_list_handle;
     try {
         ep->createMemList(elements, mem_list_handle);
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e) {
         NIXL_ERROR << "Failed to create device memory list for GPU transfer: " << e.what();
         return NIXL_ERR_BACKEND;
     }
@@ -1739,7 +1747,8 @@ nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
     try {
         ep->releaseMemList(mem_list_handle);
         NIXL_DEBUG << "GPU transfer request released";
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e) {
         NIXL_WARN << "Failed to release GPU transfer request: " << e.what();
     }
 #else

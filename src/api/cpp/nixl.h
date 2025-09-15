@@ -350,7 +350,7 @@ class nixlAgent {
          * @return nixl_status_t Error code if call was not successful
          */
         nixl_status_t
-        getGpuSignalSize(size_t &signal_size, const nixl_opt_args_t* extra_params) const;
+        getGpuSignalSize(size_t &signal_size, const nixl_opt_args_t *extra_params) const;
 
         /**
          * @brief  Prepare a signal for GPU transfer.
@@ -365,7 +365,8 @@ class nixlAgent {
          * @return nixl_status_t Error code if call was not successful
          */
         nixl_status_t
-        prepGpuSignal(const nixl_reg_dlist_t &signal_descs, const nixl_opt_args_t* extra_params) const;
+        prepGpuSignal(const nixl_reg_dlist_t &signal_descs,
+                      const nixl_opt_args_t *extra_params) const;
 
         /**
          * @brief  Release the prepared descriptor list handle `dlist_hndl`
