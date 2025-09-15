@@ -741,7 +741,7 @@ nixlUcxEp::createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
     ucp_elements.reserve(elements.size());
 
     for (const auto &elem : elements) {
-        ucp_device_mem_list_elem_t ucp_elem = {};
+        ucp_device_mem_list_elem_t ucp_elem;
         ucp_elem.field_mask =
             UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH | UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY;
         ucp_elem.memh = elem.mem.memh;
@@ -749,7 +749,7 @@ nixlUcxEp::createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
         ucp_elements.push_back(ucp_elem);
     }
 
-    ucp_device_mem_list_params_t params = {};
+    ucp_device_mem_list_params_t params;
     params.field_mask = UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENTS |
         UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENT_SIZE |
         UCP_DEVICE_MEM_LIST_PARAMS_FIELD_NUM_ELEMENTS;

@@ -1578,8 +1578,6 @@ nixlUcxEngine::postXfer(const nixl_xfer_op_t &operation,
 
     // TODO: assert that handle is empty/completed, as we can't post request before completion
 
-    int_handle->storeDescriptorLists(local, remote);
-
     ret = sendXferRange(operation, local, remote, remote_agent, handle, 0, lcnt);
     if (ret != NIXL_SUCCESS) {
         return ret;
@@ -1652,8 +1650,7 @@ nixl_status_t
 nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
                                 nixlGpuXferReqH &gpu_req_hndl) const {
 #ifdef HAVE_UCX_GPU_DEVICE_API
-    auto *intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
-    size_t workerId = intHandle->getWorkerId();
+    auto intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
 
     if (remoteConnMap.empty()) {
         NIXL_ERROR << "No remote connections found";
@@ -1668,6 +1665,7 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
         return NIXL_ERR_NOT_FOUND;
     }
 
+    size_t workerId = intHandle->getWorkerId();
     nixlUcxEp *ep = search->second->getEp(workerId).get();
 
     const nixl_meta_dlist_t *localDescs = intHandle->getLocalDescs();
@@ -1691,17 +1689,16 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
         const auto &localDesc = (*localDescs)[i];
         const auto &remoteDesc = (*remoteDescs)[i];
 
-        nixlUcxPrivateMetadata *localMd = (nixlUcxPrivateMetadata *)localDesc.metadataP;
-        nixlUcxPublicMetadata *remoteMd = (nixlUcxPublicMetadata *)remoteDesc.metadataP;
+        nixlUcxPrivateMetadata *localMd = static_cast<nixlUcxPrivateMetadata *>(localDesc.metadataP);
+        nixlUcxPublicMetadata *remoteMd = static_cast<nixlUcxPublicMetadata *>(remoteDesc.metadataP);
 
-        nixlUcxDeviceMemElem elem;
-        elem.mem = localMd->mem;
-        elem.rkey = &remoteMd->getRkey(workerId);
-        elem.local_addr = (void *)localDesc.addr;
-        elem.remote_addr = remoteDesc.addr;
-        elem.length = localDesc.len;
-
-        elements.push_back(elem);
+        elements.emplace_back(nixlUcxDeviceMemElem{
+            localMd->mem,
+            &remoteMd->getRkey(workerId),
+            reinterpret_cast<void *>(localDesc.addr),
+            remoteDesc.addr,
+            localDesc.len
+        });
     }
 
     nixlUcxDeviceMemListH mem_list_handle;

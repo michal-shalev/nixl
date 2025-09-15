@@ -84,7 +84,7 @@ class rkey;
 }
 class nixlUcxMem;
 
-typedef void *nixlUcxDeviceMemListH;
+using nixlUcxDeviceMemListH = void *;
 struct nixlUcxDeviceMemElem;
 
 class nixlUcxEp {

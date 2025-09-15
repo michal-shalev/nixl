@@ -1253,6 +1253,11 @@ nixlAgent::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
 
 nixl_status_t
 nixlAgent::getGpuSignalSize(size_t &signal_size, const nixl_opt_args_t *extra_params) const {
+    if (!extra_params || extra_params->backends.empty()) {
+        NIXL_ERROR_FUNC << "backend must be specified in extra_params";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
     NIXL_SHARED_LOCK_GUARD(data->lock);
     return extra_params->backends[0]->engine->getGpuSignalSize(signal_size);
 }
