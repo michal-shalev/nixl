@@ -39,11 +39,13 @@ class gpuXferReqH {
 public:
     gpuXferReqH() = delete;
 
-    static nixlGpuXferReqH create(const nixlUcxEp &ep,
-                                  const std::vector<nixlUcxMem> &local_mems,
-                                  const std::vector<const nixl::ucx::rkey *> &remote_rkeys);
+    static nixlGpuXferReqH
+    create(const nixlUcxEp &ep,
+           const std::vector<nixlUcxMem> &local_mems,
+           const std::vector<const nixl::ucx::rkey *> &remote_rkeys);
 
-    static void release(nixlGpuXferReqH gpu_req);
+    static void
+    release(nixlGpuXferReqH gpu_req);
 
 private:
 #ifdef HAVE_UCX_GPU_DEVICE_API
