@@ -29,7 +29,8 @@ namespace nixl::ucx {
 deviceMemList::deviceMemList(const nixlUcxEp &ep,
                              const std::vector<nixlUcxMem> &local_mems,
                              const std::vector<const nixl::ucx::rkey *> &remote_rkeys)
-    : deviceMemList_{createDeviceMemList(ep, local_mems, remote_rkeys), &ucp_device_mem_list_release} {}
+    : deviceMemList_{createDeviceMemList(ep, local_mems, remote_rkeys),
+                     &ucp_device_mem_list_release} {}
 
 deviceMemList::deviceMemList(const ucp_device_mem_list_handle_h device_mem_list) noexcept
     : deviceMemList_{device_mem_list, &ucp_device_mem_list_release} {}
