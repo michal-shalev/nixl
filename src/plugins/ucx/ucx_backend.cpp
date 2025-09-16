@@ -19,7 +19,7 @@
 #include "common/nixl_log.h"
 #include "serdes/serdes.h"
 #include "common/nixl_log.h"
-#include "ucx/gpu_xfer_req_h.h"
+#include "ucx/device_mem_list.h"
 
 #include <optional>
 #include <limits>
@@ -1666,7 +1666,9 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     }
 
     try {
-        gpu_req_hndl = nixl::ucx::gpuXferReqH::create(*ep, local_mems, remote_rkeys);
+        auto device_mem_list = std::make_unique<nixl::ucx::deviceMemList>(*ep, local_mems, remote_rkeys);
+        gpu_req_hndl = device_mem_list->get();
+        device_mem_list.release();
         return NIXL_SUCCESS;
     }
     catch (const std::exception &e) {
@@ -1677,7 +1679,8 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
 
 void
 nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
-    nixl::ucx::gpuXferReqH::release(gpu_req_hndl);
+    nixl::ucx::deviceMemList device_mem_list{gpu_req_hndl};
+    gpu_req_hndl = nullptr;
 }
 
 nixl_status_t
