@@ -583,4 +583,3 @@ INSTANTIATE_TEST_SUITE_P(
     [](const testing::TestParamInfo<nixl_gpu_level_t> &info) {
         return std::string("UCX_") + gtest::gpu::GetGpuXferLevelStr(info.param);
     });
-
