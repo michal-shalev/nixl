@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "device_mem_list.h"
+#include "gpu_xfer_req_h.h"
 
 #include <stdexcept>
 
@@ -26,19 +26,29 @@
 
 namespace nixl::ucx {
 
-deviceMemList::deviceMemList(const nixlUcxEp &ep,
-                             const std::vector<nixlUcxMem> &local_mems,
-                             const std::vector<const nixl::ucx::rkey *> &remote_rkeys)
-    : deviceMemList_{createDeviceMemList(ep, local_mems, remote_rkeys),
-                     &ucp_device_mem_list_release} {}
+#ifdef HAVE_UCX_GPU_DEVICE_API
 
-deviceMemList::deviceMemList(const ucp_device_mem_list_handle_h device_mem_list) noexcept
-    : deviceMemList_{device_mem_list, &ucp_device_mem_list_release} {}
+nixlGpuXferReqH gpuXferReqH::create(const nixlUcxEp &ep,
+                                    const std::vector<nixlUcxMem> &local_mems,
+                                    const std::vector<const nixl::ucx::rkey *> &remote_rkeys) {
+    ucp_device_mem_list_handle_h ucx_handle = createDeviceMemList(ep, local_mems, remote_rkeys);
+    return reinterpret_cast<nixlGpuXferReqH>(ucx_handle);
+}
+
+void gpuXferReqH::release(nixlGpuXferReqH gpu_req) {
+    if (gpu_req == nullptr) {
+        NIXL_WARN << "Attempting to release null GPU transfer request handle";
+        return;
+    }
+
+    ucp_device_mem_list_handle_h ucx_handle = reinterpret_cast<ucp_device_mem_list_handle_h>(gpu_req);
+    ucp_device_mem_list_release(ucx_handle);
+}
 
 ucp_device_mem_list_handle_h
-deviceMemList::createDeviceMemList(const nixlUcxEp &ep,
-                                   const std::vector<nixlUcxMem> &local_mems,
-                                   const std::vector<const nixl::ucx::rkey *> &remote_rkeys) {
+gpuXferReqH::createDeviceMemList(const nixlUcxEp &ep,
+                                 const std::vector<nixlUcxMem> &local_mems,
+                                 const std::vector<const nixl::ucx::rkey *> &remote_rkeys) {
     nixl_status_t status = ep.checkTxState();
     if (status != NIXL_SUCCESS) {
         throw std::runtime_error("Endpoint not in valid state for creating memory list");
@@ -82,5 +92,20 @@ deviceMemList::createDeviceMemList(const nixlUcxEp &ep,
     NIXL_DEBUG << "Created device memory list handle with " << local_mems.size() << " elements";
     return ucx_handle;
 }
+
+#else
+
+nixlGpuXferReqH gpuXferReqH::create(const nixlUcxEp &ep,
+                                    const std::vector<nixlUcxMem> &local_mems,
+                                    const std::vector<const nixl::ucx::rkey *> &remote_rkeys) {
+    NIXL_ERROR << "UCX GPU device API not supported";
+    throw std::runtime_error("UCX GPU device API not available");
+}
+
+void gpuXferReqH::release(nixlGpuXferReqH gpu_req) {
+    NIXL_WARN << "UCX GPU device API not supported - cannot release GPU transfer request handle";
+}
+
+#endif
 
 } // namespace nixl::ucx

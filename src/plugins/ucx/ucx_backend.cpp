@@ -19,9 +19,7 @@
 #include "common/nixl_log.h"
 #include "serdes/serdes.h"
 #include "common/nixl_log.h"
-#ifdef HAVE_UCX_GPU_DEVICE_API
-#include "ucx/device_mem_list.h"
-#endif
+#include "ucx/gpu_xfer_req_h.h"
 
 #include <optional>
 #include <limits>
@@ -1633,7 +1631,6 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
                                 const nixl_meta_dlist_t &local_descs,
                                 const nixl_meta_dlist_t &remote_descs,
                                 nixlGpuXferReqH &gpu_req_hndl) const {
-#ifdef HAVE_UCX_GPU_DEVICE_API
     auto intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
 
     if (local_descs.descCount() != remote_descs.descCount()) {
@@ -1669,33 +1666,18 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     }
 
     try {
-        auto device_mem_list =
-            std::make_unique<nixl::ucx::deviceMemList>(*ep, local_mems, remote_rkeys);
-        gpu_req_hndl = reinterpret_cast<nixlGpuXferReqH>(device_mem_list.release());
+        gpu_req_hndl = nixl::ucx::gpuXferReqH::create(*ep, local_mems, remote_rkeys);
         return NIXL_SUCCESS;
     }
     catch (const std::exception &e) {
         NIXL_ERROR << "Failed to create device memory list for GPU transfer: " << e.what();
         return NIXL_ERR_BACKEND;
     }
-#else
-    return NIXL_ERR_NOT_SUPPORTED;
-#endif
 }
 
 void
 nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
-#ifdef HAVE_UCX_GPU_DEVICE_API
-    if (gpu_req_hndl == nullptr) {
-        NIXL_WARN << "Attempting to release null GPU transfer request handle";
-        return;
-    }
-
-    auto *device_mem_list = reinterpret_cast<nixl::ucx::deviceMemList *>(gpu_req_hndl);
-    delete device_mem_list;
-#else
-    NIXL_WARN << "UCX GPU device API not supported";
-#endif
+    nixl::ucx::gpuXferReqH::release(gpu_req_hndl);
 }
 
 nixl_status_t
