@@ -45,7 +45,7 @@ public:
     }
 
 private:
-        [[nodiscard]] static ucp_device_mem_list_handle_h
+    [[nodiscard]] static ucp_device_mem_list_handle_h
     createDeviceMemList(const nixlUcxEp &ep,
                         const std::vector<nixlUcxMem> &local_mems,
                         const std::vector<const nixl::ucx::rkey *> &remote_rkeys);
