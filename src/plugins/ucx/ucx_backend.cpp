@@ -1661,8 +1661,8 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     remote_rkeys.reserve(remote_descs.descCount());
 
     for (size_t i = 0; i < static_cast<size_t>(local_descs.descCount()); i++) {
-        auto *localMd = static_cast<nixlUcxPrivateMetadata *>(local_descs[i].metadataP);
-        auto *remoteMdDesc = static_cast<nixlUcxPublicMetadata *>(remote_descs[i].metadataP);
+        auto localMd = static_cast<nixlUcxPrivateMetadata *>(local_descs[i].metadataP);
+        auto remoteMdDesc = static_cast<nixlUcxPublicMetadata *>(remote_descs[i].metadataP);
 
         local_mems.push_back(localMd->mem);
         remote_rkeys.push_back(&remoteMdDesc->getRkey(workerId));
