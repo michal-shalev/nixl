@@ -50,11 +50,6 @@ class nixlUcxConnection : public nixlBackendConnMD {
             return eps[ep_id];
         }
 
-        [[nodiscard]] const std::string &
-        getRemoteAgent() const noexcept {
-            return remoteAgent;
-        }
-
     friend class nixlUcxEngine;
 };
 
