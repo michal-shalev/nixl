@@ -19,6 +19,9 @@
 #include "common/nixl_log.h"
 #include "serdes/serdes.h"
 #include "common/nixl_log.h"
+#ifdef HAVE_UCX_GPU_DEVICE_API
+#include "ucx/device_mem_list.h"
+#endif
 
 #include <optional>
 #include <limits>
@@ -1654,7 +1657,7 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     size_t workerId = intHandle->getWorkerId();
     nixlUcxEp *ep = remoteMd->conn->getEp(workerId).get();
 
-    std::vector<nixlUcxDeviceMemElem> elements;
+    std::vector<nixl::ucx::deviceMemElem> elements;
     elements.reserve(local_descs.descCount());
 
     for (size_t i = 0; i < static_cast<size_t>(local_descs.descCount()); i++) {
@@ -1666,25 +1669,23 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
         nixlUcxPublicMetadata *remoteDescMd =
             static_cast<nixlUcxPublicMetadata *>(remoteDesc.metadataP);
 
-        elements.emplace_back(nixlUcxDeviceMemElem{localMd->mem,
-                                                   &remoteDescMd->getRkey(workerId),
-                                                   reinterpret_cast<void *>(localDesc.addr),
-                                                   remoteDesc.addr,
-                                                   localDesc.len});
+        elements.emplace_back(nixl::ucx::deviceMemElem{&localMd->mem,
+                                                       &remoteDescMd->getRkey(workerId),
+                                                       reinterpret_cast<void *>(localDesc.addr),
+                                                       remoteDesc.addr,
+                                                       localDesc.len});
     }
 
-    nixlUcxDeviceMemListH mem_list_handle;
     try {
-        ep->createMemList(elements, mem_list_handle);
+        auto device_mem_list = std::make_unique<nixl::ucx::deviceMemList>(*ep, elements);
+        gpu_req_hndl = reinterpret_cast<nixlGpuXferReqH>(device_mem_list.get());
+        device_mem_list.release();
+        return NIXL_SUCCESS;
     }
     catch (const std::exception &e) {
         NIXL_ERROR << "Failed to create device memory list for GPU transfer: " << e.what();
         return NIXL_ERR_BACKEND;
     }
-
-    gpu_req_hndl = reinterpret_cast<nixlGpuXferReqH>(mem_list_handle);
-
-    return NIXL_SUCCESS;
 #else
     return NIXL_ERR_NOT_SUPPORTED;
 #endif
@@ -1698,28 +1699,8 @@ nixlUcxEngine::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
         return;
     }
 
-    if (remoteConnMap.empty()) {
-        NIXL_WARN << "No remote connections available for GPU handle release";
-        return;
-    }
-
-    std::string remote_agent = remoteConnMap.begin()->second->getRemoteAgent();
-    auto search = remoteConnMap.find(remote_agent);
-    if (search == remoteConnMap.end()) {
-        NIXL_WARN << "Remote connection not found for GPU handle release";
-        return;
-    }
-
-    nixlUcxEp *ep = search->second->getEp(0).get();
-
-    nixlUcxDeviceMemListH mem_list_handle = reinterpret_cast<nixlUcxDeviceMemListH>(gpu_req_hndl);
-    try {
-    ep->releaseMemList(mem_list_handle);
-    NIXL_DEBUG << "GPU transfer request released";
-    }
-    catch (const std::exception &e) {
-        NIXL_WARN << "Failed to release GPU transfer request: " << e.what();
-    }
+    const auto ucp_device_mem_list = reinterpret_cast<ucp_device_mem_list_handle_h>(gpu_req_hndl);
+    const auto device_mem_list = std::make_unique<nixl::ucx::deviceMemList>(ucp_device_mem_list);
 #else
     NIXL_WARN << "UCX GPU device API not supported";
 #endif

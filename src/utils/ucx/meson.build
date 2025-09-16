@@ -21,8 +21,15 @@ endif
 
 ucx_utils_inc_dirs = include_directories('.')
 
+ucx_utils_sources = ['ucx_utils.cpp', 'ucx_utils.h', 'config.h', 'config.cpp', 'rkey.cpp', 'rkey.h']
+
+# Add device_mem_list files only if UCX GPU Device API is available
+if ucx_gpu_device_api_available
+    ucx_utils_sources += ['device_mem_list.cpp', 'device_mem_list.h']
+endif
+
 ucx_utils_lib = library('ucx_utils',
-           'ucx_utils.cpp', 'ucx_utils.h', 'config.h', 'config.cpp', 'rkey.cpp', 'rkey.h',
+           ucx_utils_sources,
            dependencies: ucx_utils_dep,
            include_directories: [ nixl_inc_dirs, utils_inc_dirs ],
            install: true)

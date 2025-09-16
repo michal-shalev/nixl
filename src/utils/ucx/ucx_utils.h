@@ -84,9 +84,6 @@ class rkey;
 }
 class nixlUcxMem;
 
-using nixlUcxDeviceMemListH = void *;
-struct nixlUcxDeviceMemElem;
-
 class nixlUcxEp {
     enum nixl_ucx_ep_state_t {
         NIXL_UCX_EP_STATE_NULL,
@@ -155,13 +152,6 @@ public:
     getEp() const noexcept {
         return eph;
     }
-
-    void
-    createMemList(const std::vector<nixlUcxDeviceMemElem> &elements,
-                  nixlUcxDeviceMemListH &mem_list_handle);
-
-    void
-    releaseMemList(nixlUcxDeviceMemListH mem_list_handle);
 };
 
 class nixlUcxMem {
@@ -170,17 +160,14 @@ private:
     size_t size;
     ucp_mem_h memh;
 public:
+    [[nodiscard]] ucp_mem_h
+    getMemh() const noexcept {
+        return memh;
+    }
+
     friend class nixlUcxWorker;
     friend class nixlUcxContext;
     friend class nixlUcxEp;
-};
-
-struct nixlUcxDeviceMemElem {
-    nixlUcxMem mem;
-    const nixl::ucx::rkey *rkey;
-    void *local_addr;
-    uint64_t remote_addr;
-    size_t length;
 };
 
 class nixlUcxContext {
