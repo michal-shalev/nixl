@@ -27,38 +27,38 @@
 namespace nixl::ucx {
 
 deviceMemList::deviceMemList(const nixlUcxEp &ep,
-                             const std::vector<ucp_mem_h> &local_memhs,
+                             const std::vector<nixlUcxMem> &local_mems,
                              const std::vector<const nixl::ucx::rkey *> &remote_rkeys)
-    : deviceMemList_{createDeviceMemList(ep, local_memhs, remote_rkeys), &ucp_device_mem_list_release} {}
+    : deviceMemList_{createDeviceMemList(ep, local_mems, remote_rkeys), &ucp_device_mem_list_release} {}
 
 deviceMemList::deviceMemList(const ucp_device_mem_list_handle_h device_mem_list) noexcept
     : deviceMemList_{device_mem_list, &ucp_device_mem_list_release} {}
 
 ucp_device_mem_list_handle_h
 deviceMemList::createDeviceMemList(const nixlUcxEp &ep,
-                                   const std::vector<ucp_mem_h> &local_memhs,
+                                   const std::vector<nixlUcxMem> &local_mems,
                                    const std::vector<const nixl::ucx::rkey *> &remote_rkeys) {
     nixl_status_t status = ep.checkTxState();
     if (status != NIXL_SUCCESS) {
         throw std::runtime_error("Endpoint not in valid state for creating memory list");
     }
 
-    if (local_memhs.empty() || remote_rkeys.empty()) {
+    if (local_mems.empty() || remote_rkeys.empty()) {
         throw std::invalid_argument("Empty memh or rkey lists provided");
     }
 
-    if (local_memhs.size() != remote_rkeys.size()) {
+    if (local_mems.size() != remote_rkeys.size()) {
         throw std::invalid_argument("Local memh and remote rkey lists must have same size");
     }
 
     std::vector<ucp_device_mem_list_elem_t> ucp_elements;
-    ucp_elements.reserve(local_memhs.size());
+    ucp_elements.reserve(local_mems.size());
 
-    for (size_t i = 0; i < local_memhs.size(); i++) {
+    for (size_t i = 0; i < local_mems.size(); i++) {
         ucp_device_mem_list_elem_t ucp_elem;
         ucp_elem.field_mask =
             UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH | UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY;
-        ucp_elem.memh = local_memhs[i];
+        ucp_elem.memh = local_mems[i].getMemh();
         ucp_elem.rkey = remote_rkeys[i]->get();
         ucp_elements.push_back(ucp_elem);
     }
@@ -78,7 +78,7 @@ deviceMemList::createDeviceMemList(const nixlUcxEp &ep,
                                  ucs_status_string(ucs_status));
     }
 
-    NIXL_DEBUG << "Created device memory list handle with " << local_memhs.size() << " elements";
+    NIXL_DEBUG << "Created device memory list handle with " << local_mems.size() << " elements";
     return ucx_handle;
 }
 

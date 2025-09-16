@@ -26,6 +26,7 @@ extern "C" {
 }
 
 class nixlUcxEp;
+class nixlUcxMem;
 
 namespace nixl::ucx {
 class rkey;
@@ -34,7 +35,7 @@ class deviceMemList {
 public:
     deviceMemList() = delete;
     deviceMemList(const nixlUcxEp &ep,
-                  const std::vector<ucp_mem_h> &local_memhs,
+                  const std::vector<nixlUcxMem> &local_mems,
                   const std::vector<const nixl::ucx::rkey *> &remote_rkeys);
     explicit deviceMemList(const ucp_device_mem_list_handle_h) noexcept;
 
@@ -46,7 +47,7 @@ public:
 private:
     [[nodiscard]] static ucp_device_mem_list_handle_h
     createDeviceMemList(const nixlUcxEp &ep,
-                       const std::vector<ucp_mem_h> &local_memhs,
+                       const std::vector<nixlUcxMem> &local_mems,
                        const std::vector<const nixl::ucx::rkey *> &remote_rkeys);
 
     const std::unique_ptr<ucp_device_mem_list_handle, void (*)(ucp_device_mem_list_handle_h)>
