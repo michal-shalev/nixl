@@ -1666,7 +1666,8 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     }
 
     try {
-        auto device_mem_list = std::make_unique<nixl::ucx::deviceMemList>(*ep, local_mems, remote_rkeys);
+        auto device_mem_list =
+            std::make_unique<nixl::ucx::deviceMemList>(*ep, local_mems, remote_rkeys);
         gpu_req_hndl = device_mem_list->get();
         device_mem_list.release();
         return NIXL_SUCCESS;
