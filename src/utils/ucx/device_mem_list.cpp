@@ -33,7 +33,8 @@ deviceMemList::deviceMemList(const ucp_device_mem_list_handle_h device_mem_list)
     : deviceMemList_{device_mem_list, &ucp_device_mem_list_release} {}
 
 ucp_device_mem_list_handle_h
-deviceMemList::createDeviceMemList(const nixlUcxEp &ep, const std::vector<deviceMemElem> &elements) {
+deviceMemList::createDeviceMemList(const nixlUcxEp &ep,
+                                   const std::vector<deviceMemElem> &elements) {
     nixl_status_t status = ep.checkTxState();
     if (status != NIXL_SUCCESS) {
         throw std::runtime_error("Endpoint not in valid state for creating memory list");

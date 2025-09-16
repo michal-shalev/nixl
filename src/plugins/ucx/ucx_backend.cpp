@@ -441,8 +441,6 @@ public:
         return out_ret;
     }
 
-
-
     void
     setWorker(nixlUcxWorker *worker, size_t worker_id) {
         NIXL_ASSERT(this->worker == nullptr || worker == nullptr);

@@ -54,7 +54,8 @@ private:
     [[nodiscard]] static ucp_device_mem_list_handle_h
     createDeviceMemList(const nixlUcxEp &, const std::vector<deviceMemElem> &);
 
-    const std::unique_ptr<ucp_device_mem_list_handle, void (*)(ucp_device_mem_list_handle_h)> deviceMemList_;
+    const std::unique_ptr<ucp_device_mem_list_handle, void (*)(ucp_device_mem_list_handle_h)>
+        deviceMemList_;
 };
 } // namespace nixl::ucx
 
