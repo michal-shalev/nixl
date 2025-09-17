@@ -67,9 +67,28 @@ if cuda_dep.found()
     cuda = import('unstable-cuda')
     nvcc = meson.get_compiler('cuda')
 
-    nvcc_flags = get_option('nvcc_gencode')
-    add_project_arguments(nvcc_flags, language: 'cuda')
-    add_project_link_arguments(nvcc_flags, language: 'cuda')
+    # Set default CUDA architectures if not specified by user
+    # Users can override with: -Dcuda_args="-gencode=arch=compute_XX,code=sm_XX"
+    default_cuda_args = [
+        '-gencode=arch=compute_80,code=sm_80',
+        '-gencode=arch=compute_90,code=sm_90'
+    ]
+    default_cuda_link_args = [
+        '-gencode=arch=compute_80,code=sm_80',
+        '-gencode=arch=compute_90,code=sm_90'
+    ]
+
+    # Apply defaults only if user hasn't specified custom args
+    cuda_args_option = get_option('cuda_args')
+    cuda_link_args_option = get_option('cuda_link_args')
+
+    if cuda_args_option == []
+        add_project_arguments(default_cuda_args, language: 'cuda')
+    endif
+
+    if cuda_link_args_option == []
+        add_project_link_arguments(default_cuda_link_args, language: 'cuda')
+    endif
 
     # Refer to https://mesonbuild.com/Cuda-module.html
     add_project_arguments('-forward-unknown-to-host-compiler', language: 'cuda')
