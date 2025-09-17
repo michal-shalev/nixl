@@ -18,7 +18,6 @@ device_api_inc_dirs = include_directories('.')
 
 device_api_sources = [
     'single_write_test.cu',
-    'signal_test.cu',
     'utils.cu'
 ]
 
