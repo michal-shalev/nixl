@@ -101,7 +101,7 @@ if cuda_dep.found()
     nvcc_flags_link += ['-gencode=arch=compute_90,code=sm_90']
     add_project_link_arguments(nvcc_flags_link, language: 'cuda')
 
-    if not get_option('cuda_debug_enable')
+    if not get_option('enable_cuda_debug')
         add_project_arguments('-dopt=on', language: 'cuda')
     endif
 else
