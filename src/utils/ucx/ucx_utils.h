@@ -160,6 +160,11 @@ private:
     size_t size;
     ucp_mem_h memh;
 public:
+    [[nodiscard]] ucp_mem_h
+    getMemh() const noexcept {
+        return memh;
+    }
+
     friend class nixlUcxWorker;
     friend class nixlUcxContext;
     friend class nixlUcxEp;
@@ -186,6 +191,13 @@ public:
     int memReg(void *addr, size_t size, nixlUcxMem &mem, nixl_mem_t nixl_mem_type);
     [[nodiscard]] std::string packRkey(nixlUcxMem &mem);
     void memDereg(nixlUcxMem &mem);
+
+    /* GPU signal management */
+    void
+    prepGpuSignal(const nixlUcxMem &mem, void *signal) const;
+
+    [[nodiscard]] size_t
+    getGpuSignalSize() const;
 
     friend class nixlUcxWorker;
 };
