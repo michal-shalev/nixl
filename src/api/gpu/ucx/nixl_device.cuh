@@ -259,7 +259,7 @@ nixlGpuReadSignal(const void *signal) {
  * The signal must be initialized with the host function @ref prepGpuSignal.
  *
  * @param signal [in,out]  Address of the signal.
- * @param value  [in]  Value to write to the signal.
+ * @param value  [in]      Value to write to the signal.
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ void
