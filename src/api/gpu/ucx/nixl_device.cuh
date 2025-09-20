@@ -266,7 +266,7 @@ nixlGpuReadSignal(const void *signal) {
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ void
 nixlGpuWriteSignal(void *signal, uint64_t value) {
-    ucp_device_counter_write<static_cast<ucp_device_level_t>(level)>(signal, value);
+    ucp_device_counter_write<static_cast<ucs_device_level_t>(level)>(signal, value);
 }
 
 #endif // _NIXL_DEVICE_CUH
