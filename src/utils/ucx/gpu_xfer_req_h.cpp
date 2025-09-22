@@ -46,7 +46,8 @@ createGpuXferReq(const nixlUcxEp &ep,
     }
 
     if (local_mems.size() != remote_rkeys.size() || local_mems.size() != remote_addrs.size()) {
-        throw std::invalid_argument("Local memory, remote rkey, and remote address lists must have same size");
+        throw std::invalid_argument(
+            "Local memory, remote rkey, and remote address lists must have same size");
     }
 
     std::vector<ucp_device_mem_list_elem_t> ucp_elements;
@@ -54,9 +55,9 @@ createGpuXferReq(const nixlUcxEp &ep,
 
     for (size_t i = 0; i < local_mems.size(); i++) {
         ucp_device_mem_list_elem_t ucp_elem;
-        ucp_elem.field_mask =
-            UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH | UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY |
-            UCP_DEVICE_MEM_LIST_ELEM_FIELD_L_ADDR | UCP_DEVICE_MEM_LIST_ELEM_FIELD_R_ADDR;
+        ucp_elem.field_mask = UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH |
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY | UCP_DEVICE_MEM_LIST_ELEM_FIELD_L_ADDR |
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_R_ADDR;
         ucp_elem.memh = local_mems[i].getMemh();
         ucp_elem.rkey = remote_rkeys[i]->get();
         ucp_elem.l_addr = local_mems[i].getBase();
