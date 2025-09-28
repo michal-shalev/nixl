@@ -1284,7 +1284,8 @@ nixlAgent::prepGpuSignal(const nixl_reg_dlist_t &signal_descs,
     size_t signal_size;
     nixl_status_t ret = backend->engine->getGpuSignalSize(signal_size);
     if (ret != NIXL_SUCCESS) {
-        NIXL_ERROR_FUNC << "failed to get GPU signal size with status: " << nixlEnumStrings::statusStr(ret);
+        NIXL_ERROR_FUNC << "failed to get GPU signal size with status: "
+                        << nixlEnumStrings::statusStr(ret);
         return ret;
     }
 
