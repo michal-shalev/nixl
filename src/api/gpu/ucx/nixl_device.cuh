@@ -115,7 +115,7 @@ template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
                          unsigned channel_id,
-                         unsigned signal_index,
+                         unsigned signal_desc_index,
                          uint64_t signal_inc,
                          size_t signal_offset,
                          bool is_no_delay = true,
@@ -123,7 +123,7 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_counter_inc<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, signal_index, signal_inc, signal_offset, params.flags, params.ucp_request);
+        params.mem_list, signal_desc_index, signal_inc, signal_offset, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -234,7 +234,7 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
-nixlGpuGetXferStatus(nixlGpuXferStatusH &xfer_status, uint16_t channel_id) {
+nixlGpuGetXferStatus(nixlGpuXferStatusH &xfer_status, unsigned channel_id) {
     const auto status = ucp_device_progress_req<static_cast<ucs_device_level_t>(level)>(
         &xfer_status.device_request);
 
