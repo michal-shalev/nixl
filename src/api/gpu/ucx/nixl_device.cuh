@@ -24,11 +24,6 @@ struct nixlGpuXferStatusH {
     ucp_device_request_t device_request;
 };
 
-struct nixlGpuSignal {
-    uint64_t inc = 0;
-    uint64_t offset = 0;
-};
-
 /**
  * @enum  nixl_gpu_level_t
  * @brief An enumeration of different levels for GPU transfer requests.
@@ -88,10 +83,10 @@ nixlGpuConvertUcsStatus(ucs_status_t status) {
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
-                              uint16_t channel_id,
+                              unsigned channel_id,
                               unsigned index,
-                              uint64_t local_offset,
-                              uint64_t remote_offset,
+                              size_t local_offset,
+                              size_t remote_offset,
                               size_t size,
                               bool is_no_delay = true,
                               nixlGpuXferStatusH *xfer_status = nullptr) {
@@ -108,8 +103,9 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
  *
  * @param req_hndl           [in]  Request handle.
  * @param channel_id         [in]  Channel ID to use for the transfer.
- * @param signal             [in]  Signal to be sent.
- * @param signal_index       [in]  Index of the signal to be transferred.
+ * @param signal_desc_index  [in]  Index of the signal descriptor to be sent.
+ * @param signal_inc         [in]  Increment value for the signal.
+ * @param signal_offset      [in]  Offset of the signal to be sent.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
  *
@@ -118,15 +114,16 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
-                         uint16_t channel_id,
-                         const nixlGpuSignal &signal,
+                         unsigned channel_id,
                          unsigned signal_index,
+                         uint64_t signal_inc,
+                         size_t signal_offset,
                          bool is_no_delay = true,
                          nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_counter_inc<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, signal_index, signal.inc, signal.offset, params.flags, params.ucp_request);
+        params.mem_list, signal_index, signal_inc, signal_offset, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -142,8 +139,9 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @param sizes              [in]  Sizes of the blocks to send.
  * @param local_offsets      [in]  Local offsets of the blocks to send.
  * @param remote_offsets     [in]  Remote offsets of the blocks to send to.
- * @param signal             [in]  Signal to be sent.
- * @param signal_index       [in]  Index of the signal to be sent.
+ * @param signal_desc_index  [in]  Index of the signal descriptor to be sent.
+ * @param signal_inc         [in]  Increment value for the signal.
+ * @param signal_offset      [in]  Offset of the signal to be sent.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
  *
@@ -152,14 +150,15 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
-                               uint16_t channel_id,
+                               unsigned channel_id,
                                size_t count,
                                const unsigned *indices,
                                const size_t *sizes,
-                               const uint64_t *local_offsets,
-                               const uint64_t *remote_offsets,
-                               const nixlGpuSignal &signal,
-                               unsigned signal_index,
+                               const size_t *local_offsets,
+                               const size_t *remote_offsets,
+                               unsigned signal_desc_index,
+                               uint64_t signal_inc,
+                               size_t signal_offset,
                                bool is_no_delay = true,
                                nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
@@ -171,9 +170,9 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
                                                                              local_offsets,
                                                                              remote_offsets,
                                                                              sizes,
-                                                                             signal_index,
-                                                                             signal.inc,
-                                                                             signal.offset,
+                                                                             signal_desc_index,
+                                                                             signal_inc,
+                                                                             signal_offset,
                                                                              params.flags,
                                                                              params.ucp_request);
 
@@ -200,11 +199,12 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
-                        uint16_t channel_id,
+                        unsigned channel_id,
                         const size_t *sizes,
-                        const uint64_t *offsets,
-                        const uint64_t *remote_offsets,
-                        const nixlGpuSignal &signal,
+                        const size_t *offsets,
+                        const size_t *remote_offsets,
+                        uint64_t signal_inc,
+                        size_t signal_offset,
                         bool is_no_delay = true,
                         nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
@@ -214,8 +214,8 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
                                                                      offsets,
                                                                      remote_offsets,
                                                                      sizes,
-                                                                     signal.inc,
-                                                                     signal.offset,
+                                                                     signal_inc,
+                                                                     signal_offset,
                                                                      params.flags,
                                                                      params.ucp_request);
 
