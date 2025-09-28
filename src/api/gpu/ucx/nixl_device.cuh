@@ -134,8 +134,8 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @param req_hndl           [in]  Request handle.
  * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param count              [in]  Number of blocks to send. This is also the length of the arrays
- *                                 @a indices, @a sizes, @a local_offsets, and @a remote_offsets.
- * @param indices            [in]  Indices of the blocks to send.
+ *                                 @a desc_indices, @a sizes, @a local_offsets, and @a remote_offsets.
+ * @param desc_indices       [in]  Indices of the memory descriptors to send.
  * @param sizes              [in]  Sizes of the blocks to send.
  * @param local_offsets      [in]  Local offsets of the blocks to send.
  * @param remote_offsets     [in]  Remote offsets of the blocks to send to.
@@ -152,7 +152,7 @@ __device__ nixl_status_t
 nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
                                unsigned channel_id,
                                size_t count,
-                               const unsigned *indices,
+                               const unsigned *desc_indices,
                                const size_t *sizes,
                                const size_t *local_offsets,
                                const size_t *remote_offsets,
@@ -165,7 +165,7 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
 
     ucs_status_t status =
         ucp_device_put_multi_partial<static_cast<ucs_device_level_t>(level)>(params.mem_list,
-                                                                             indices,
+                                                                             desc_indices,
                                                                              count,
                                                                              local_offsets,
                                                                              remote_offsets,
@@ -187,7 +187,8 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
  * @param sizes              [in]  Sizes of the blocks to send.
  * @param offsets            [in]  Offsets of the blocks to send.
  * @param remote_offsets     [in]  Remote offsets of the blocks to send to.
- * @param signal             [in]  Signal to be sent.
+ * @param signal_inc         [in]  Increment value for the signal.
+ * @param signal_offset      [in]  Offset of the signal to be sent.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
  *
