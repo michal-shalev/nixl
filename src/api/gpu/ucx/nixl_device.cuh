@@ -26,7 +26,7 @@ struct nixlGpuXferStatusH {
 
 struct nixlGpuSignal {
     uint64_t inc = 0;
-    uint64_t remote_addr = 0;
+    uint64_t offset = 0;
 };
 
 /**
@@ -122,7 +122,7 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_counter_inc<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, signal_index, signal.inc, signal.remote_addr, params.flags, params.ucp_request);
+        params.mem_list, signal_index, signal.inc, signal.offset, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -167,7 +167,7 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
                                                                              sizes,
                                                                              signal_index,
                                                                              signal.inc,
-                                                                             signal.remote_addr,
+                                                                             signal.offset,
                                                                              params.flags,
                                                                              params.ucp_request);
 
@@ -207,7 +207,7 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
                                                                      remote_offsets,
                                                                      sizes,
                                                                      signal.inc,
-                                                                     signal.remote_addr,
+                                                                     signal.offset,
                                                                      params.flags,
                                                                      params.ucp_request);
 
