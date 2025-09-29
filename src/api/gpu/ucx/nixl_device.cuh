@@ -71,20 +71,20 @@ nixlGpuConvertUcsStatus(ucs_status_t status) {
  *
  * @param req_hndl      [in]  Request handle.
  * @param channel_id    [in]  Channel ID to use for the transfer.
- * @param index         [in]  Index of the memory descriptor in the transfer request.
+ * @param desc_index    [in]  Index of the memory descriptor in the transfer request.
  * @param local_offset  [in]  Local offset of the memory to be transferred.
  * @param remote_offset [in]  Remote offset of the memory to be transferred to.
- * @param size          [in]  Size of the memory to be transferred.
+ * @param size          [in]  Size in bytes of the memory to be transferred.
  * @param is_no_delay   [in]  Whether to use no-delay mode.
  * @param xfer_status   [out] Status of the transfer. If null, the status is not reported.
  *
- * @return nixl_status_t    Error code if call was not successful
+ * @return nixl_status_t      Error code if call was not successful
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
                               unsigned channel_id,
-                              unsigned index,
+                              unsigned desc_index,
                               size_t local_offset,
                               size_t remote_offset,
                               size_t size,
@@ -93,7 +93,7 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_put_single<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, index, local_offset, remote_offset, size, params.flags, params.ucp_request);
+        params.mem_list, channel_id, desc_index, local_offset, remote_offset, size, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -123,7 +123,7 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_counter_inc<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, signal_desc_index, signal_inc, signal_offset, params.flags, params.ucp_request);
+        params.mem_list, channel_id, signal_desc_index, signal_inc, signal_offset, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -165,6 +165,7 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
 
     ucs_status_t status =
         ucp_device_put_multi_partial<static_cast<ucs_device_level_t>(level)>(params.mem_list,
+                                                                             channel_id,
                                                                              desc_indices,
                                                                              count,
                                                                              local_offsets,
@@ -212,6 +213,7 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
 
     ucs_status_t status =
         ucp_device_put_multi<static_cast<ucs_device_level_t>(level)>(params.mem_list,
+                                                                     channel_id,
                                                                      offsets,
                                                                      remote_offsets,
                                                                      sizes,
