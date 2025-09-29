@@ -57,11 +57,12 @@ createGpuXferReq(const nixlUcxEp &ep,
         ucp_device_mem_list_elem_t ucp_elem;
         ucp_elem.field_mask = UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH |
             UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY | UCP_DEVICE_MEM_LIST_ELEM_FIELD_LOCAL_ADDR |
-            UCP_DEVICE_MEM_LIST_ELEM_FIELD_REMOTE_ADDR;
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_REMOTE_ADDR | UCP_DEVICE_MEM_LIST_ELEM_FIELD_LENGTH;
         ucp_elem.memh = local_mems[i].getMemh();
         ucp_elem.rkey = remote_rkeys[i]->get();
         ucp_elem.local_addr = local_mems[i].getBase();
         ucp_elem.remote_addr = remote_addrs[i];
+        ucp_elem.length = local_mems[i].getSize();
         ucp_elements.push_back(ucp_elem);
     }
 

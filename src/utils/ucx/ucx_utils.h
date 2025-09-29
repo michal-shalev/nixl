@@ -170,6 +170,11 @@ public:
         return base;
     }
 
+    [[nodiscard]] size_t
+    getSize() const noexcept {
+        return size;
+    }
+
     friend class nixlUcxWorker;
     friend class nixlUcxContext;
     friend class nixlUcxEp;
