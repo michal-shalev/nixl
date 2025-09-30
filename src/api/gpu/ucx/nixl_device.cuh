@@ -185,16 +185,10 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
  *
  * @param req_hndl           [in]  Request handle.
  * @param channel_id         [in]  Channel ID to use for the transfer.
- * @param sizes              [in]  Sizes of the blocks to send.
- * @param offsets            [in]  Offsets of the blocks to send.
- * @param remote_offsets     [in]  Remote offsets of the blocks to send to.
  * @param signal_inc         [in]  Increment value for the signal.
  * @param signal_offset      [in]  Offset of the signal to be sent.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
- *
- * @note The arrays @a sizes, @a offsets, and @a remote_offsets must have the same length, which
- *       corresponds to the number of blocks to transfer as specified in @a req_hndl.
  *
  * @return nixl_status_t    Error code if call was not successful
  */
@@ -202,9 +196,6 @@ template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
                         unsigned channel_id,
-                        const size_t *sizes,
-                        const size_t *offsets,
-                        const size_t *remote_offsets,
                         uint64_t signal_inc,
                         size_t signal_offset,
                         bool is_no_delay = true,
@@ -214,9 +205,6 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
     ucs_status_t status =
         ucp_device_put_multi<static_cast<ucs_device_level_t>(level)>(params.mem_list,
                                                                      channel_id,
-                                                                     offsets,
-                                                                     remote_offsets,
-                                                                     sizes,
                                                                      signal_inc,
                                                                      signal_offset,
                                                                      params.flags,
