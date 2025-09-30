@@ -140,7 +140,7 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @param local_offsets      [in]  Local offsets of the blocks to send.
  * @param remote_offsets     [in]  Remote offsets of the blocks to send to.
  * @param signal_desc_index  [in]  Index of the signal descriptor to be sent.
- * @param signal_inc         [in]  Increment value for the signal.
+ * @param signal_inc         [in]  Increment value for the signal. The signal will only be posted if signal_inc != 0.
  * @param signal_offset      [in]  Offset of the signal to be sent.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
@@ -185,7 +185,7 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
  *
  * @param req_hndl           [in]  Request handle.
  * @param channel_id         [in]  Channel ID to use for the transfer.
- * @param signal_inc         [in]  Increment value for the signal.
+ * @param signal_inc         [in]  Increment value for the signal. The signal will only be posted if signal_inc != 0.
  * @param signal_offset      [in]  Offset of the signal to be sent.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
