@@ -239,7 +239,7 @@ template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuGetXferStatus(nixlGpuXferStatusH &xfer_status, unsigned channel_id) {
     const auto status = ucp_device_progress_req<static_cast<ucs_device_level_t>(level)>(
-        &xfer_status.device_request);
+        &xfer_status.device_request, channel_id);
 
     switch (status) {
     case UCS_OK:
