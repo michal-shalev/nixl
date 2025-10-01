@@ -117,8 +117,8 @@ $ meson setup <name_of_build_dir> \
 
 # CUDA GPU architecture targeting (example)
 $ meson setup <name_of_build_dir> \
-    -Dcuda_args="-gencode=arch=compute_80,code=sm_80,-gencode=arch=compute_90,code=sm_90" \
-    -Dcuda_link_args="-gencode=arch=compute_80,code=sm_80,-gencode=arch=compute_90,code=sm_90"
+    -Dcuda_args="-gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_90,code=sm_90" \
+    -Dcuda_link_args="-gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_90,code=sm_90"
 ```
 
 Common build options:
