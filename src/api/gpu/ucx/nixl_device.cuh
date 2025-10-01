@@ -217,7 +217,6 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
  * @brief Get the status of the transfer request.
  *
  * @param xfer_status [in]  Status of the transfer.
- * @param channel_id  [in]  Channel ID to use for the transfer.
  *
  * @return NIXL_SUCCESS  The request has completed, no more operations are in progress.
  * @return NIXL_IN_PROG  One or more operations in the request have not completed.
@@ -225,9 +224,9 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
-nixlGpuGetXferStatus(nixlGpuXferStatusH &xfer_status, unsigned channel_id) {
+nixlGpuGetXferStatus(nixlGpuXferStatusH &xfer_status) {
     const auto status = ucp_device_progress_req<static_cast<ucs_device_level_t>(level)>(
-        &xfer_status.device_request, channel_id);
+        &xfer_status.device_request);
 
     switch (status) {
     case UCS_OK:

@@ -56,7 +56,7 @@ TestSingleWriteKernel(nixlGpuXferReqH req_hdnl,
             return;
         }
 
-        status = nixlGpuGetXferStatus<level>(*xfer_status_ptr, 0);
+        status = nixlGpuGetXferStatus<level>(*xfer_status_ptr);
         if (status != NIXL_SUCCESS && status != NIXL_IN_PROG) {
             printf("Thread %d: Failed to progress single write transfer iteration %zu: status=%d\n",
                    threadIdx.x,
@@ -66,7 +66,7 @@ TestSingleWriteKernel(nixlGpuXferReqH req_hdnl,
         }
 
         while (status == NIXL_IN_PROG) {
-            status = nixlGpuGetXferStatus<level>(*xfer_status_ptr, 0);
+            status = nixlGpuGetXferStatus<level>(*xfer_status_ptr);
             if (status != NIXL_SUCCESS && status != NIXL_IN_PROG) {
                 printf("Thread %d: Failed to progress single write transfer iteration %zu: status=%d\n",
                        threadIdx.x,
