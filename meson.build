@@ -82,31 +82,32 @@ else
 endif
 
 if cuda_dep.found()
-    add_languages('CUDA')
+    add_languages('cuda')
     cuda = import('unstable-cuda')
     nvcc = meson.get_compiler('cuda')
 
     # Set default CUDA architectures if not specified by user
-    # Users can override with: -Dcuda_args="-gencode=arch=compute_XX,code=sm_XX"
-    default_cuda_args = [
+    # Users can override with cuda_args and cuda_link_args options
+    # See README.md for details and examples
+    cuda_args_option = get_option('cuda_args')
+    cuda_link_args_option = get_option('cuda_link_args')
+
+    cuda_args = [
         '-gencode=arch=compute_80,code=sm_80',
         '-gencode=arch=compute_90,code=sm_90'
     ]
-    default_cuda_link_args = [
+    cuda_link_args = [
         '-gencode=arch=compute_80,code=sm_80',
         '-gencode=arch=compute_90,code=sm_90'
     ]
 
     # Apply defaults only if user hasn't specified custom args
-    cuda_args_option = get_option('cuda_args')
-    cuda_link_args_option = get_option('cuda_link_args')
-
     if cuda_args_option == []
-        add_project_arguments(default_cuda_args, language: 'cuda')
+        add_project_arguments(cuda_args, language: 'cuda')
     endif
 
     if cuda_link_args_option == []
-        add_project_link_arguments(default_cuda_link_args, language: 'cuda')
+        add_project_link_arguments(cuda_link_args, language: 'cuda')
     endif
 
     # Refer to https://mesonbuild.com/Cuda-module.html
@@ -182,7 +183,7 @@ if ucx_dep.found() and cuda_dep.found() and nvcc_prog.found()
     have_gpu_side = cuda.compiles('''
             #include <ucp/api/device/ucp_device_impl.h>
             int main() { return 0; }
-        ''', dependencies : ucx_dep, args: nvcc_flags)
+        ''', dependencies : ucx_dep, args: cuda_args)
 
     have_host_side = cpp.compiles('''
             #include <ucp/api/device/ucp_host.h>

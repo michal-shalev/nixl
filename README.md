@@ -133,7 +133,8 @@ Common build options:
 
 ### CUDA GPU Architecture Configuration
 
-NIXL automatically targets CUDA compute capabilities 8.0 (Ampere) and 9.0 (Hopper) by default. To target specific GPU architectures or add additional ones, use the `cuda_args` and `cuda_link_args` options:
+NIXL automatically targets CUDA compute capabilities 8.0 (Ampere) and 9.0 (Hopper) by default.
+To target specific GPU architectures or add additional ones, use the `cuda_args` and `cuda_link_args` options:
 
 ```bash
 # Target specific architectures
@@ -143,8 +144,8 @@ $ meson setup build \
 
 # Target multiple architectures
 $ meson setup build \
-    -Dcuda_args="-gencode=arch=compute_75,code=sm_75,-gencode=arch=compute_80,code=sm_80,-gencode=arch=compute_90,code=sm_90" \
-    -Dcuda_link_args="-gencode=arch=compute_75,code=sm_75,-gencode=arch=compute_80,code=sm_80,-gencode=arch=compute_90,code=sm_90"
+    -Dcuda_args="-gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_90,code=sm_90" \
+    -Dcuda_link_args="-gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_90,code=sm_90"
 ```
 
 Common CUDA compute capabilities:
