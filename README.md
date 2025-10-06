@@ -153,7 +153,7 @@ Common CUDA compute capabilities:
 - `compute_80,code=sm_80`: NVIDIA Ampere (A100, RTX 30xx)
 - `compute_86,code=sm_86`: NVIDIA Ampere (RTX 30xx consumer)
 - `compute_89,code=sm_89`: NVIDIA Ada Lovelace (RTX 40xx)
-- `compute_90,code=sm_90`: NVIDIA Hopper (H100)
+- `compute_90,code=sm_90`: NVIDIA Hopper (H100, H800, H200)
 
 ### Building Documentation
 

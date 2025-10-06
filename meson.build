@@ -92,22 +92,29 @@ if cuda_dep.found()
     cuda_args_option = get_option('cuda_args')
     cuda_link_args_option = get_option('cuda_link_args')
 
-    cuda_args = [
+    # Define default architectures
+    default_cuda_args = [
         '-gencode=arch=compute_80,code=sm_80',
         '-gencode=arch=compute_90,code=sm_90'
     ]
-    cuda_link_args = [
+    default_cuda_link_args = [
         '-gencode=arch=compute_80,code=sm_80',
         '-gencode=arch=compute_90,code=sm_90'
     ]
 
     # Apply defaults only if user hasn't specified custom args
     if cuda_args_option == []
+        cuda_args = default_cuda_args
         add_project_arguments(cuda_args, language: 'cuda')
+    else
+        cuda_args = []
     endif
 
     if cuda_link_args_option == []
+        cuda_link_args = default_cuda_link_args
         add_project_link_arguments(cuda_link_args, language: 'cuda')
+    else
+        cuda_link_args = []
     endif
 
     # Refer to https://mesonbuild.com/Cuda-module.html
