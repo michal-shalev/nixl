@@ -70,11 +70,11 @@ nixlGpuConvertUcsStatus(ucs_status_t status) {
  * @brief Post a memory transfer request to the GPU.
  *
  * @param req_hndl      [in]  Request handle.
- * @param channel_id    [in]  Channel ID to use for the transfer.
  * @param desc_index    [in]  Index of the memory descriptor in the transfer request.
  * @param local_offset  [in]  Local offset of the memory to be transferred.
  * @param remote_offset [in]  Remote offset of the memory to be transferred to.
  * @param size          [in]  Size in bytes of the memory to be transferred.
+ * @param channel_id    [in]  Channel ID to use for the transfer.
  * @param is_no_delay   [in]  Whether to use no-delay mode.
  * @param xfer_status   [out] Status of the transfer. If null, the status is not reported.
  *
@@ -83,11 +83,11 @@ nixlGpuConvertUcsStatus(ucs_status_t status) {
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
-                              unsigned channel_id,
                               unsigned desc_index,
                               size_t local_offset,
                               size_t remote_offset,
                               size_t size,
+                              unsigned channel_id = 0,
                               bool is_no_delay = true,
                               nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
@@ -102,10 +102,10 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
  * @brief Post a signal transfer request to the GPU.
  *
  * @param req_hndl           [in]  Request handle.
- * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param signal_desc_index  [in]  Index of the signal descriptor to be sent.
  * @param signal_inc         [in]  Increment value for the signal.
  * @param signal_offset      [in]  Offset of the signal to be sent.
+ * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
  *
@@ -114,10 +114,10 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
-                         unsigned channel_id,
                          unsigned signal_desc_index,
                          uint64_t signal_inc,
                          size_t signal_offset,
+                         unsigned channel_id = 0,
                          bool is_no_delay = true,
                          nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
@@ -132,7 +132,6 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @brief Post a partial memory transfer request to the GPU.
  *
  * @param req_hndl           [in]  Request handle.
- * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param count              [in]  Number of blocks to send. This is also the length of the arrays
  *                                 @a desc_indices, @a sizes, @a local_offsets, and @a remote_offsets.
  * @param desc_indices       [in]  Indices of the memory descriptors to send.
@@ -142,6 +141,7 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @param signal_desc_index  [in]  Index of the signal descriptor to be sent.
  * @param signal_inc         [in]  Increment value for the signal. The signal will only be posted if signal_inc != 0.
  * @param signal_offset      [in]  Offset of the signal to be sent.
+ * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
  *
@@ -150,7 +150,6 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
-                               unsigned channel_id,
                                size_t count,
                                const unsigned *desc_indices,
                                const size_t *sizes,
@@ -159,6 +158,7 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
                                unsigned signal_desc_index,
                                uint64_t signal_inc,
                                size_t signal_offset,
+                               unsigned channel_id = 0,
                                bool is_no_delay = true,
                                nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
@@ -184,9 +184,9 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
  * @brief Post a memory transfer request to the GPU.
  *
  * @param req_hndl           [in]  Request handle.
- * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param signal_inc         [in]  Increment value for the signal. The signal will only be posted if signal_inc != 0.
  * @param signal_offset      [in]  Offset of the signal to be sent.
+ * @param channel_id         [in]  Channel ID to use for the transfer.
  * @param is_no_delay        [in]  Whether to use no-delay mode.
  * @param xfer_status        [out] Status of the transfer. If null, the status is not reported.
  *
@@ -195,9 +195,9 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
 nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
-                        unsigned channel_id,
                         uint64_t signal_inc,
                         size_t signal_offset,
+                        unsigned channel_id = 0,
                         bool is_no_delay = true,
                         nixlGpuXferStatusH *xfer_status = nullptr) {
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
