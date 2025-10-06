@@ -93,7 +93,7 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_put_single<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, channel_id, desc_index, local_offset, remote_offset, size, params.flags, params.ucp_request);
+        params.mem_list, desc_index, local_offset, remote_offset, size, channel_id, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -123,7 +123,7 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
     const nixlGpuXferReqParams params{req_hndl, is_no_delay, xfer_status};
 
     ucs_status_t status = ucp_device_counter_inc<static_cast<ucs_device_level_t>(level)>(
-        params.mem_list, channel_id, signal_desc_index, signal_inc, signal_offset, params.flags, params.ucp_request);
+        params.mem_list, signal_desc_index, signal_inc, signal_offset, channel_id, params.flags, params.ucp_request);
 
     return nixlGpuConvertUcsStatus(status);
 }
@@ -165,7 +165,6 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
 
     ucs_status_t status =
         ucp_device_put_multi_partial<static_cast<ucs_device_level_t>(level)>(params.mem_list,
-                                                                             channel_id,
                                                                              desc_indices,
                                                                              count,
                                                                              local_offsets,
@@ -174,6 +173,7 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
                                                                              signal_desc_index,
                                                                              signal_inc,
                                                                              signal_offset,
+                                                                             channel_id,
                                                                              params.flags,
                                                                              params.ucp_request);
 
@@ -204,9 +204,9 @@ nixlGpuPostWriteXferReq(nixlGpuXferReqH req_hndl,
 
     ucs_status_t status =
         ucp_device_put_multi<static_cast<ucs_device_level_t>(level)>(params.mem_list,
-                                                                     channel_id,
                                                                      signal_inc,
                                                                      signal_offset,
+                                                                     channel_id,
                                                                      params.flags,
                                                                      params.ucp_request);
 
