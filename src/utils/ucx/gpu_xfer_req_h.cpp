@@ -103,7 +103,8 @@ nixlGpuXferReqH
 createGpuXferReq(const nixlUcxEp &ep,
                  const std::vector<nixlUcxMem> &local_mems,
                  const std::vector<const nixl::ucx::rkey *> &remote_rkeys,
-                 const std::vector<uint64_t> &remote_addrs) {
+                 const std::vector<uint64_t> &remote_addrs,
+                 const std::vector<size_t> &remote_lengths) {
     NIXL_ERROR << "UCX GPU device API not supported";
     throw std::runtime_error("UCX GPU device API not available");
 }
