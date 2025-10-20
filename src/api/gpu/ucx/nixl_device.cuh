@@ -20,11 +20,22 @@
 #include <nixl_types.h>
 #include <ucp/api/device/ucp_device_impl.h>
 
+/* Helper function to extract the base filename */
+__device__ __forceinline__ static const char* nixl_device_basefile(const char* path) {
+    const char* base = path;
+    for (const char* p = path; *p; ++p) {
+        if (*p == '/') {
+            base = p + 1;
+        }
+    }
+    return base;
+}
+
 /* Helper macro to print a message from NIXL device function including the
- * thread and block indices, file, line, and function */
-#define nixl_device_printf(_title, _fmt, ...) \
-    printf("(%5d:%5d) %5s %s:%d %s: " _fmt "\n", threadIdx.x, blockIdx.x, _title, \
-           __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+ * thread and block indices, file and line */
+#define nixl_device_printf(_log_level, _fmt, ...) \
+    printf("%c T%-4d:B%-4d%*s%s:%d] " _fmt "\n", _log_level[0], threadIdx.x, blockIdx.x, \
+           17, "", nixl_device_basefile(__FILE__), __LINE__, ##__VA_ARGS__)
 
 /* Print an error message from NIXL device function */
 #define nixl_device_error(_fmt, ...) \
