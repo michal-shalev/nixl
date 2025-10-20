@@ -80,12 +80,13 @@ struct nixlGpuXferReqParams {
  *
  * @param status [in] UCS status code.
  *
- * @return nixl_status_t Corresponding NIXL status code.
+ * @return NIXL_IN_PROG     If the UCS status is not an error.
+ * @return NIXL_ERR_BACKEND If the UCS status is an error.
  */
 __device__ inline nixl_status_t
 nixlGpuConvertUcsStatus(ucs_status_t status) {
     if (!UCS_STATUS_IS_ERR(status)) {
-        return NIXL_SUCCESS;
+        return NIXL_IN_PROG;
     }
     nixl_device_error("UCX backend error");
     return NIXL_ERR_BACKEND;
@@ -104,7 +105,8 @@ nixlGpuConvertUcsStatus(ucs_status_t status) {
  * @param xfer_status   [out] Status of the transfer. If not null, use @ref
  *                            nixlGpuGetXferStatus to check for completion.
  *
- * @return nixl_status_t      Error code if call was not successful
+ * @return NIXL_IN_PROG       Transfer posted successfully.
+ * @return NIXL_ERR_BACKEND   An error occurred in UCX backend.
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
@@ -136,7 +138,8 @@ nixlGpuPostSingleWriteXferReq(nixlGpuXferReqH req_hndl,
  * @param xfer_status        [out] Status of the transfer. If not null, use @ref
  *                                 nixlGpuGetXferStatus to check for completion.
  *
- * @return nixl_status_t           Error code if call was not successful
+ * @return NIXL_IN_PROG            Transfer posted successfully.
+ * @return NIXL_ERR_BACKEND        An error occurred in UCX backend.
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
@@ -173,7 +176,8 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @param xfer_status        [out] Status of the transfer. If not null, use @ref
  *                                 nixlGpuGetXferStatus to check for completion.
  *
- * @return nixl_status_t           Error code if call was not successful
+ * @return NIXL_IN_PROG            Transfer posted successfully.
+ * @return NIXL_ERR_BACKEND        An error occurred in UCX backend.
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
@@ -219,7 +223,8 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
  * @param xfer_status        [out] Status of the transfer. If not null, use @ref
  *                                 nixlGpuGetXferStatus to check for completion.
  *
- * @return nixl_status_t           Error code if call was not successful
+ * @return NIXL_IN_PROG            Transfer posted successfully.
+ * @return NIXL_ERR_BACKEND        An error occurred in UCX backend.
  */
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
 __device__ nixl_status_t
