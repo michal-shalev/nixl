@@ -88,7 +88,7 @@ nixlGpuConvertUcsStatus(ucs_status_t status) {
     if (!UCS_STATUS_IS_ERR(status)) {
         return NIXL_IN_PROG;
     }
-    nixl_device_error("UCX backend error");
+    nixl_device_error("UCX backend error: %s", ucs_device_status_string(status));
     return NIXL_ERR_BACKEND;
 }
 
@@ -268,7 +268,7 @@ nixlGpuGetXferStatus(nixlGpuXferStatusH &xfer_status) {
     case UCS_INPROGRESS:
         return NIXL_IN_PROG;
     default:
-        nixl_device_error("UCX backend error");
+        nixl_device_error("UCX backend error: %s", ucs_device_status_string(status));
         return NIXL_ERR_BACKEND;
     }
 }
