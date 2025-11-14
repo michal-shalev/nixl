@@ -437,10 +437,12 @@ TEST_P(SingleWriteTest, BasicSingleWriteTest) {
     nixlXferReqH *xfer_req = nullptr;
     nixlGpuXferReqH gpu_req_hndl;
 
+    nixlBasicDesc empty_signal{0};
     nixl_status_t status = getAgent(SENDER_AGENT)
                                .createGpuXferReq(
                                               makeDescList<nixlBasicDesc>(src_buffers, mem_type),
                                               makeDescList<nixlBasicDesc>(dst_buffers, mem_type),
+                                              empty_signal,
                                               getAgentName(RECEIVER_AGENT),
                                               gpu_req_hndl,
                                               xfer_req,
@@ -538,11 +540,13 @@ TEST_P(SingleWriteTest, VariableSizeTest) {
         nixlXferReqH *xfer_req = nullptr;
         nixlGpuXferReqH gpu_req_hndl;
 
+        nixlBasicDesc empty_signal{0};
         nixl_status_t status =
             getAgent(SENDER_AGENT)
                 .createGpuXferReq(
                                makeDescList<nixlBasicDesc>(src_buffers, mem_type),
                                makeDescList<nixlBasicDesc>(dst_buffers, mem_type),
+                               empty_signal,
                                getAgentName(RECEIVER_AGENT),
                                gpu_req_hndl,
                                xfer_req,
@@ -637,17 +641,17 @@ TEST_P(SingleWriteTest, MultipleWorkersTest) {
     for (size_t worker_id = 0; worker_id < numWorkers; worker_id++) {
         extra_params.customParam = "worker_id=" + std::to_string(worker_id);
 
+        nixlBasicDesc empty_signal{0};
         nixl_status_t status = getAgent(SENDER_AGENT)
-                                   .createXferReq(NIXL_WRITE,
+                                   .createGpuXferReq(
                                                   makeDescList<nixlBasicDesc>(src_buffers[worker_id], mem_type),
                                                   makeDescList<nixlBasicDesc>(dst_buffers[worker_id], mem_type),
+                                                  empty_signal,
                                                   getAgentName(RECEIVER_AGENT),
+                                                  gpu_req_hndls[worker_id],
                                                   xfer_reqs[worker_id],
                                                   &extra_params);
 
-        ASSERT_EQ(status, NIXL_SUCCESS) << "Failed to create xfer request for worker " << worker_id;
-
-        status = getAgent(SENDER_AGENT).createGpuXferReq(*xfer_reqs[worker_id], gpu_req_hndls[worker_id]);
         ASSERT_EQ(status, NIXL_SUCCESS) << "Failed to create GPU xfer request for worker " << worker_id;
     }
 
