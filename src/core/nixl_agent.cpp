@@ -1258,27 +1258,24 @@ nixlAgent::createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
     }
 
     if (!extra_params || extra_params->backends.size() == 0) {
-        backend_set_t* local_set =
-            data->memorySection->queryBackends(local_descs.getType());
-        backend_set_t* remote_set =
-            data->remoteSections[remote_agent]->queryBackends(
-                                                remote_descs.getType());
+        backend_set_t *local_set = data->memorySection->queryBackends(local_descs.getType());
+        backend_set_t *remote_set =
+            data->remoteSections[remote_agent]->queryBackends(remote_descs.getType());
         if (!local_set || !remote_set) {
             NIXL_ERROR_FUNC << "no backends found for local or remote for their "
                                "corresponding memory type";
             return NIXL_ERR_NOT_FOUND;
         }
 
-        for (auto & elm : *local_set)
-            if (remote_set->count(elm) != 0)
-                backend_set->insert(elm);
+        for (auto &elm : *local_set)
+            if (remote_set->count(elm) != 0) backend_set->insert(elm);
 
         if (backend_set->empty()) {
             NIXL_ERROR_FUNC << "no potential backend found to be able to do the transfer";
             return NIXL_ERR_NOT_FOUND;
         }
     } else {
-        for (auto & elm : extra_params->backends)
+        for (auto &elm : extra_params->backends)
             backend_set->insert(elm->engine);
     }
 
@@ -1352,27 +1349,32 @@ nixlAgent::createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
     if (signal_desc.len > 0) {
         nixl_xfer_dlist_t signal_dlist(local_descs.getType());
         signal_dlist.addDesc(signal_desc);
-        nixl_meta_dlist_t signal_meta_dlist(local_descs.getType());
+        nixl_meta_dlist_t signal_descs(local_descs.getType());
 
-        ret1 = data->remoteSections[remote_agent]->populate(signal_dlist, req_hndl->engine, signal_meta_dlist);
-        if (ret1 != NIXL_SUCCESS) {
+        const nixl_status_t status = data->remoteSections[remote_agent]->populate(
+            signal_dlist, req_hndl->engine, signal_descs);
+        if (status != NIXL_SUCCESS) {
             NIXL_ERROR_FUNC << "Failed to populate signal descriptor metadata";
-            data->addErrorTelemetry(ret1);
+            data->addErrorTelemetry(status);
             delete req_hndl;
-            return ret1;
+            return status;
         }
 
-        if (signal_meta_dlist.descCount() != 1) {
-            NIXL_ERROR_FUNC << "Signal descriptor list has unexpected count: " << signal_meta_dlist.descCount();
+        if (signal_descs.descCount() != 1) {
+            NIXL_ERROR_FUNC << "Signal descriptor list has unexpected count: "
+                            << signal_descs.descCount();
             delete req_hndl;
             return NIXL_ERR_INVALID_PARAM;
         }
 
-        signal_meta_desc = signal_meta_dlist[0];
+        signal_meta_desc = signal_descs[0];
     }
 
-    const auto status = req_hndl->engine->createGpuXferReq(
-        *req_hndl->backendHandle, *req_hndl->initiatorDescs, *req_hndl->targetDescs, signal_meta_desc, gpu_req_hndl);
+    const auto status = req_hndl->engine->createGpuXferReq(*req_hndl->backendHandle,
+                                                           *req_hndl->initiatorDescs,
+                                                           *req_hndl->targetDescs,
+                                                           signal_meta_desc,
+                                                           gpu_req_hndl);
     if (status == NIXL_SUCCESS) {
         data->gpuReqToEngine.emplace(gpu_req_hndl, req_hndl->engine);
     }

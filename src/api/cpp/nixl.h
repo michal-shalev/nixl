@@ -335,7 +335,7 @@ class nixlAgent {
         nixl_status_t
         createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
                          const nixl_xfer_dlist_t &remote_descs,
-                         const nixlBasicDesc& signal_desc,
+                         const nixlBasicDesc &signal_desc,
                          const std::string &remote_agent,
                          nixlGpuXferReqH &gpu_req_hndl,
                          nixlXferReqH *&req_hndl,

@@ -1635,7 +1635,7 @@ nixl_status_t
 nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
                                 const nixl_meta_dlist_t &local_descs,
                                 const nixl_meta_dlist_t &remote_descs,
-                                const nixlMetaDesc &signal_meta_desc,
+                                const nixlMetaDesc &signal_desc,
                                 nixlGpuXferReqH &gpu_req_hndl) const {
     auto intHandle = static_cast<const nixlUcxBackendH *>(&req_hndl);
 
@@ -1668,21 +1668,29 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     }
 
     const nixl::ucx::rkey *ucx_signal_rkey = nullptr;
-    const uint64_t signal_addr = (signal_meta_desc.len > 0) ? signal_meta_desc.addr : 0;
-    const size_t signal_len = signal_meta_desc.len;
-    if (signal_meta_desc.len > 0) {
-        if (gpuSignalSize_ && signal_meta_desc.len != *gpuSignalSize_) {
-            NIXL_ERROR << "Signal length mismatch: expected " << *gpuSignalSize_
-                       << " but got " << signal_meta_desc.len;
+    const uint64_t signal_addr = signal_desc.addr;
+    const size_t signal_len = signal_desc.len;
+
+    if (signal_desc.len > 0) {
+        if (gpuSignalSize_ && signal_desc.len != *gpuSignalSize_) {
+            NIXL_ERROR << "Signal length mismatch: expected " << *gpuSignalSize_ << " but got "
+                       << signal_desc.len;
             return NIXL_ERR_INVALID_PARAM;
         }
 
-        auto signalMd = static_cast<const nixlUcxPublicMetadata *>(signal_meta_desc.metadataP);
-        ucx_signal_rkey = &signalMd->getRkey(workerId);
+        auto signal_md = static_cast<const nixlUcxPublicMetadata *>(signal_desc.metadataP);
+        ucx_signal_rkey = &signal_md->getRkey(workerId);
     }
 
     try {
-        gpu_req_hndl = nixl::ucx::createGpuXferReq(*ep, local_mems, remote_rkeys, remote_addrs, remote_lengths, signal_addr, signal_len, ucx_signal_rkey);
+        gpu_req_hndl = nixl::ucx::createGpuXferReq(*ep,
+                                                   local_mems,
+                                                   remote_rkeys,
+                                                   remote_addrs,
+                                                   remote_lengths,
+                                                   signal_addr,
+                                                   signal_len,
+                                                   ucx_signal_rkey);
         NIXL_TRACE << "Created device memory list: ep=" << ep->getEp() << " handle=" << gpu_req_hndl
                    << " worker_id=" << workerId << " num_elements=" << local_mems.size();
         return NIXL_SUCCESS;
