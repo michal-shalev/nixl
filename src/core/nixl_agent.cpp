@@ -893,32 +893,41 @@ nixlAgent::createXferReq(const nixl_xfer_op_t &operation,
     if (!extra_params || extra_params->backends.size() == 0) {
         // Finding backends that support the corresponding memories
         // locally and remotely, and find the common ones.
-        backend_set_t *local_set = data->memorySection->queryBackends(local_descs.getType());
-        backend_set_t *remote_set =
-            data->remoteSections[remote_agent]->queryBackends(remote_descs.getType());
+        backend_set_t* local_set =
+            data->memorySection->queryBackends(local_descs.getType());
+        backend_set_t* remote_set =
+            data->remoteSections[remote_agent]->queryBackends(
+                                                remote_descs.getType());
         if (!local_set || !remote_set) {
             NIXL_ERROR_FUNC << "no backends found for local or remote for their "
                                "corresponding memory type";
             return NIXL_ERR_NOT_FOUND;
         }
 
-        for (auto &elm : *local_set)
-            if (remote_set->count(elm) != 0) backend_set->insert(elm);
+        for (auto & elm : *local_set)
+            if (remote_set->count(elm) != 0)
+                backend_set->insert(elm);
 
         if (backend_set->empty()) {
             NIXL_ERROR_FUNC << "no potential backend found to be able to do the transfer";
             return NIXL_ERR_NOT_FOUND;
         }
     } else {
-        for (auto &elm : extra_params->backends)
+        for (auto & elm : extra_params->backends)
             backend_set->insert(elm->engine);
     }
+
+    // TODO: when central KV is supported, add a call to fetchRemoteMD
+    // TODO: merge descriptors back to back in memory (like makeXferReq).
+    // TODO [Perf]: Avoid heap allocation on the datapath, maybe use a mem pool
 
     std::unique_ptr<nixlXferReqH> handle = std::make_unique<nixlXferReqH>();
     handle->initiatorDescs = new nixl_meta_dlist_t(local_descs.getType());
 
     handle->targetDescs = new nixl_meta_dlist_t(remote_descs.getType());
 
+    // Currently we loop through and find first local match. Can use a
+    // preference list or more exhaustive search.
     for (auto & backend : *backend_set) {
         ret1 = data->memorySection->populate(
                      local_descs, backend, *handle->initiatorDescs);
