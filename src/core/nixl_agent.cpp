@@ -929,6 +929,7 @@ nixlAgent::createXferReq(const nixl_xfer_op_t &operation,
     // Currently we loop through and find first local match. Can use a
     // preference list or more exhaustive search.
     for (auto & backend : *backend_set) {
+        // If populate fails, it clears the resp before return
         ret1 = data->memorySection->populate(
                      local_descs, backend, *handle->initiatorDescs);
         ret2 = data->remoteSections[remote_agent]->populate(
