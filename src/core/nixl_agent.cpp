@@ -1330,12 +1330,12 @@ nixlAgent::createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
         handle->telemetry.descCount = handle->initiatorDescs->descCount();
     }
 
-    ret1 = handle->engine->prepXfer (handle->backendOp,
-                                     *handle->initiatorDescs,
-                                     *handle->targetDescs,
-                                     handle->remoteAgent,
-                                     handle->backendHandle,
-                                     &opt_args);
+    ret1 = handle->engine->prepXfer(handle->backendOp,
+                                    *handle->initiatorDescs,
+                                    *handle->targetDescs,
+                                    handle->remoteAgent,
+                                    handle->backendHandle,
+                                    &opt_args);
     if (ret1 != NIXL_SUCCESS) {
         NIXL_ERROR_FUNC << "backend '" << handle->engine->getType()
                         << "' failed to prepare the transfer request with status " << ret1;
