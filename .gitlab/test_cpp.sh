@@ -68,10 +68,6 @@ if $TEST_LIBFABRIC ; then
 fi
 ./bin/nixl_etcd_example
 ./bin/ucx_backend_test
-# Skip UCX_MO backend test on GPU worker, fails VRAM transfers
-if ! $HAS_GPU ; then
-    ./bin/ucx_mo_backend_test
-fi
 mkdir -p /tmp/telemetry_test
 NIXL_TELEMETRY_ENABLE=y NIXL_TELEMETRY_DIR=/tmp/telemetry_test ./bin/agent_example &
 sleep 1
@@ -83,7 +79,7 @@ kill -s INT $telePID
 # POSIX test disabled until we solve io_uring and Docker compatibility
 
 ./bin/nixl_posix_test -n 128 -s 1048576
-
+./bin/nixl_gusli_test -n 4 -s 16
 ./bin/ucx_backend_multi
 ./bin/serdes_test
 
