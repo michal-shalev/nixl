@@ -1670,7 +1670,13 @@ nixlUcxEngine::createGpuXferReq(const nixlBackendReqH &req_hndl,
     const nixl::ucx::rkey *ucx_signal_rkey = nullptr;
     const uint64_t signal_addr = (signal_meta_desc.len > 0) ? signal_meta_desc.addr : 0;
     const size_t signal_len = signal_meta_desc.len;
-    if (signal_meta_desc.len > 0 && signal_meta_desc.metadataP != nullptr) {
+    if (signal_meta_desc.len > 0) {
+        if (gpuSignalSize_ && signal_meta_desc.len != *gpuSignalSize_) {
+            NIXL_ERROR << "Signal length mismatch: expected " << *gpuSignalSize_
+                       << " but got " << signal_meta_desc.len;
+            return NIXL_ERR_INVALID_PARAM;
+        }
+
         auto signalMd = static_cast<const nixlUcxPublicMetadata *>(signal_meta_desc.metadataP);
         ucx_signal_rkey = &signalMd->getRkey(workerId);
     }
