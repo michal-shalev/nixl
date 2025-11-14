@@ -1223,6 +1223,7 @@ nixlAgent::releaseXferReq(nixlXferReqH *req_hndl) const {
 nixl_status_t
 nixlAgent::createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
                             const nixl_xfer_dlist_t &remote_descs,
+                            const nixlBasicDesc &signal_desc,
                             const std::string &remote_agent,
                             nixlGpuXferReqH &gpu_req_hndl,
                             nixlXferReqH *&req_hndl,
@@ -1347,8 +1348,31 @@ nixlAgent::createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
 
     req_hndl = handle.release();
 
+    nixlMetaDesc signal_meta_desc{};
+    if (signal_desc.len > 0) {
+        nixl_xfer_dlist_t signal_dlist(local_descs.getType());
+        signal_dlist.addDesc(signal_desc);
+        nixl_meta_dlist_t signal_meta_dlist(local_descs.getType());
+
+        ret1 = data->remoteSections[remote_agent]->populate(signal_dlist, req_hndl->engine, signal_meta_dlist);
+        if (ret1 != NIXL_SUCCESS) {
+            NIXL_ERROR_FUNC << "Failed to populate signal descriptor metadata";
+            data->addErrorTelemetry(ret1);
+            delete req_hndl;
+            return ret1;
+        }
+
+        if (signal_meta_dlist.descCount() != 1) {
+            NIXL_ERROR_FUNC << "Signal descriptor list has unexpected count: " << signal_meta_dlist.descCount();
+            delete req_hndl;
+            return NIXL_ERR_INVALID_PARAM;
+        }
+
+        signal_meta_desc = signal_meta_dlist[0];
+    }
+
     const auto status = req_hndl->engine->createGpuXferReq(
-        *req_hndl->backendHandle, *req_hndl->initiatorDescs, *req_hndl->targetDescs, gpu_req_hndl);
+        *req_hndl->backendHandle, *req_hndl->initiatorDescs, *req_hndl->targetDescs, signal_meta_desc, gpu_req_hndl);
     if (status == NIXL_SUCCESS) {
         data->gpuReqToEngine.emplace(gpu_req_hndl, req_hndl->engine);
     }

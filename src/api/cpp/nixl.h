@@ -323,8 +323,9 @@ class nixlAgent {
          * @brief  Create a GPU transfer request from a transfer request.
          *
          *
-         * @param  local_descs    [in]  Local descriptor list (empty for signal-only case)
+         * @param  local_descs    [in]  Local descriptor list
          * @param  remote_descs   [in]  Remote descriptor list
+         * @param  signal_desc    [in]  Signal descriptor
          * @param  remote_agent   [in]  Remote agent name for accessing the remote data
          * @param  gpu_req_hndl   [out] GPU transfer request handle
          * @param  req_hndl       [out] Transfer request handle
@@ -334,6 +335,7 @@ class nixlAgent {
         nixl_status_t
         createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
                          const nixl_xfer_dlist_t &remote_descs,
+                         const nixlBasicDesc& signal_desc,
                          const std::string &remote_agent,
                          nixlGpuXferReqH &gpu_req_hndl,
                          nixlXferReqH *&req_hndl,

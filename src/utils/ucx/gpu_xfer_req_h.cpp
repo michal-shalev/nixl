@@ -36,15 +36,18 @@ createGpuXferReq(const nixlUcxEp &ep,
                  const std::vector<nixlUcxMem> &local_mems,
                  const std::vector<const nixl::ucx::rkey *> &remote_rkeys,
                  const std::vector<uint64_t> &remote_addrs,
-                 const std::vector<size_t> &remote_lengths) {
+                 const std::vector<size_t> &remote_lengths,
+                 uint64_t signal_addr,
+                 size_t signal_len,
+                 const nixl::ucx::rkey *signal_rkey) {
     nixl_status_t status = ep.checkTxState();
     if (status != NIXL_SUCCESS) {
         throw std::runtime_error("Endpoint not in valid state for creating memory list");
     }
 
-
+    const bool has_signal = (signal_len > 0 && signal_rkey != nullptr);
     std::vector<ucp_device_mem_list_elem_t> ucp_elements;
-    ucp_elements.reserve(local_mems.size());
+    ucp_elements.reserve(local_mems.size() + (has_signal ? 1 : 0));
 
     for (size_t i = 0; i < local_mems.size(); i++) {
         ucp_device_mem_list_elem_t ucp_elem;
@@ -70,6 +73,18 @@ createGpuXferReq(const nixlUcxEp &ep,
         ucp_elem.rkey = remote_rkeys[i]->get();
         ucp_elem.remote_addr = remote_addrs[i];
         ucp_elements.push_back(ucp_elem);
+    }
+
+    if (has_signal) {
+        ucp_device_mem_list_elem_t signal_elem;
+        signal_elem.field_mask = UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY |
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_REMOTE_ADDR | UCP_DEVICE_MEM_LIST_ELEM_FIELD_LENGTH;
+        signal_elem.memh = nullptr;
+        signal_elem.local_addr = nullptr;
+        signal_elem.remote_addr = signal_addr;
+        signal_elem.length = signal_len;
+        signal_elem.rkey = signal_rkey->get();
+        ucp_elements.push_back(signal_elem);
     }
 
     ucp_device_mem_list_params_t params;
@@ -105,7 +120,10 @@ createGpuXferReq(const nixlUcxEp &ep,
                  const std::vector<nixlUcxMem> &local_mems,
                  const std::vector<const nixl::ucx::rkey *> &remote_rkeys,
                  const std::vector<uint64_t> &remote_addrs,
-                 const std::vector<size_t> &remote_lengths) {
+                 const std::vector<size_t> &remote_lengths,
+                 uint64_t signal_addr,
+                 size_t signal_len,
+                 const nixl::ucx::rkey *signal_rkey) {
     NIXL_ERROR << "UCX GPU device API not supported";
     throw std::runtime_error("UCX GPU device API not available");
 }
