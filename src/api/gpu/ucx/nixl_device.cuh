@@ -153,9 +153,8 @@ nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
  * @return NIXL_IN_PROG            Transfer posted successfully.
  * @return NIXL_ERR_BACKEND        An error occurred in UCX backend.
  */
-[[deprecated("This API will be removed in NIXL version 0.9.0")]]
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
-__device__ nixl_status_t
+__device__ __attribute__((deprecated("This API will be removed in NIXL version 0.9.0"))) nixl_status_t
 nixlGpuPostSignalXferReq(nixlGpuXferReqH req_hndl,
                          unsigned signal_desc_index,
                          uint64_t signal_inc,
@@ -247,9 +246,8 @@ nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
  * @return NIXL_IN_PROG            Transfer posted successfully.
  * @return NIXL_ERR_BACKEND        An error occurred in UCX backend.
  */
-[[deprecated("This API will be removed in NIXL version 0.9.0")]]
 template<nixl_gpu_level_t level = nixl_gpu_level_t::THREAD>
-__device__ nixl_status_t
+__device__ __attribute__((deprecated("This API will be removed in NIXL version 0.9.0"))) nixl_status_t
 nixlGpuPostPartialWriteXferReq(nixlGpuXferReqH req_hndl,
                                size_t count,
                                const unsigned *desc_indices,
