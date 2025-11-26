@@ -78,7 +78,6 @@ public:
     int m_ordinal{defaultCudaDeviceOrdinal};
     CUdevice m_device{CU_DEVICE_INVALID};
     CUcontext m_context{nullptr};
-
 public:
 
     bool push() {
@@ -119,7 +118,6 @@ public:
 
 class nixlUcxCudaCtxGuard {
     nixlUcxCudaDevicePrimaryCtxPtr m_primary;
-
 public:
     nixlUcxCudaCtxGuard(nixl_mem_t nixl_mem,
                         nixlUcxCudaDevicePrimaryCtxPtr primary) {
@@ -127,7 +125,6 @@ public:
             m_primary = primary;
         }
     }
-
     ~nixlUcxCudaCtxGuard() {
         if (m_primary) {
             m_primary->pop();
@@ -288,7 +285,6 @@ private:
             : agent(remote_agent),
               payload(msg) {}
     };
-
     std::optional<Notif> notif;
 
     nixl_status_t
@@ -1063,7 +1059,7 @@ nixlUcxThreadPoolEngine::getNotifs(notif_list_t &notif_list) {
 
 /****************************************
  * Constructor/Destructor
-*****************************************/
+ *****************************************/
 
 std::unique_ptr<nixlUcxEngine>
 nixlUcxEngine::create(const nixlBackendInitParams &init_params) {
@@ -1252,9 +1248,9 @@ nixl_status_t nixlUcxEngine::registerMem (const nixlBlobDesc &mem,
     return NIXL_SUCCESS;
 }
 
-nixl_status_t
-nixlUcxEngine::deregisterMem(nixlBackendMD *meta) {
-    nixlUcxPrivateMetadata *priv = (nixlUcxPrivateMetadata *)meta;
+nixl_status_t nixlUcxEngine::deregisterMem (nixlBackendMD* meta)
+{
+    nixlUcxPrivateMetadata *priv = (nixlUcxPrivateMetadata*) meta;
     uc->memDereg(priv->mem);
     delete priv;
     return NIXL_SUCCESS;
@@ -1302,6 +1298,7 @@ nixlUcxEngine::internalMDHelper (const nixl_blob_t &blob,
     }
 }
 
+nixl_status_t
 nixlUcxEngine::loadLocalMD (nixlBackendMD* input,
                             nixlBackendMD* &output)
 {
@@ -1430,8 +1427,7 @@ nixl_status_t nixlUcxEngine::estimateXferCost (const nixl_xfer_op_t &operation,
         nixlUcxPrivateMetadata *lmd = static_cast<nixlUcxPrivateMetadata*>(local[i].metadataP);
         nixlUcxPublicMetadata *rmd = static_cast<nixlUcxPublicMetadata*>(remote[i].metadataP);
 
-        NIXL_ASSERT(lmd && rmd) << "No metadata found in descriptor lists at index " << i
-                                << " during cost estimation";
+        NIXL_ASSERT(lmd && rmd) << "No metadata found in descriptor lists at index " << i << " during cost estimation";
         NIXL_ASSERT(lsize == rsize) << "Local size (" << lsize << ") != Remote size (" << rsize
                                     << ") at index " << i << " during cost estimation";
 
@@ -1817,11 +1813,14 @@ nixlUcxEngine::appendNotif(std::string remote_name, std::string msg) {
     notifMainList.emplace_back(std::move(remote_name), std::move(msg));
 }
 
+ucs_status_t
 nixlUcxEngine::notifAmCb(void *arg, const void *header,
                          size_t header_length, void *data,
                          size_t length,
                          const ucp_am_recv_param_t *param)
 {
+    nixlSerDes ser_des;
+
     std::string ser_str( (char*) data, length);
     nixlUcxEngine* engine = (nixlUcxEngine*) arg;
 
