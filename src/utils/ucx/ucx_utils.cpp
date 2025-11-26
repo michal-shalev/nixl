@@ -406,11 +406,14 @@ bool nixlUcxMtLevelIsSupported(const nixl_ucx_mt_t mt_type) noexcept
 }
 
 nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
-                               size_t req_size,
                                bool prog_thread,
                                unsigned long num_workers,
-                               nixl_thread_sync_t sync_mode) {
+                               nixl_thread_sync_t sync_mode,
+                               const std::string &engine_config) {
     ucp_params_t ucp_params;
+    unsigned major_version, minor_version, release_number;
+    ucp_get_version(&major_version, &minor_version, &release_number);
+    unsigned ucp_version = UCP_VERSION(major_version, minor_version);
 
     // With strict synchronization model nixlAgent serializes access to backends, with more
     // permissive models backends need to account for concurrent access and ensure their internal
@@ -422,17 +425,14 @@ nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
     ucp_params.field_mask = UCP_PARAM_FIELD_FEATURES | UCP_PARAM_FIELD_MT_WORKERS_SHARED;
     ucp_params.features = UCP_FEATURE_RMA | UCP_FEATURE_AMO32 | UCP_FEATURE_AMO64 | UCP_FEATURE_AM;
 #ifdef HAVE_UCX_GPU_DEVICE_API
-    ucp_params.features |= UCP_FEATURE_DEVICE;
+    if (ucp_version >= UCP_VERSION(1, 21)) {
+        ucp_params.features |= UCP_FEATURE_DEVICE;
+    }
 #endif
 
     if (prog_thread)
         ucp_params.features |= UCP_FEATURE_WAKEUP;
     ucp_params.mt_workers_shared = num_workers > 1 ? 1 : 0;
-
-    if (req_size) {
-        ucp_params.request_size = req_size;
-        ucp_params.field_mask |= UCP_PARAM_FIELD_REQUEST_SIZE;
-    }
 
     nixl::ucx::config config;
 
@@ -447,16 +447,24 @@ nixlUcxContext::nixlUcxContext(std::vector<std::string> devs,
         config.modifyAlways ("NET_DEVICES", devs_str.c_str());
     }
 
-    unsigned major_version, minor_version, release_number;
-    ucp_get_version(&major_version, &minor_version, &release_number);
-
     config.modify("ADDRESS_VERSION", "v2");
     config.modify("RNDV_THRESH", "inf");
     config.modify("MAX_RMA_RAILS", "2");
 
-    unsigned ucp_version = UCP_VERSION(major_version, minor_version);
     if (ucp_version >= UCP_VERSION(1, 19)) {
         config.modify("MAX_COMPONENT_MDS", "32");
+    }
+
+    std::string elem;
+    std::stringstream stream(engine_config);
+
+    while (std::getline(stream, elem, ',')) {
+        std::string_view elem_view = elem;
+        size_t pos = elem_view.find('=');
+
+        if (pos != std::string::npos) {
+            config.modify(elem_view.substr(0, pos), elem_view.substr(pos + 1));
+        }
     }
 
     const auto status = ucp_init (&ucp_params, config.getUcpConfig(), &ctx);
