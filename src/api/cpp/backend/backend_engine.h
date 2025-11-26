@@ -166,6 +166,15 @@ class nixlBackendEngine {
             return NIXL_ERR_NOT_SUPPORTED;
         }
 
+        // Deprecated: This API will be removed in NIXL version 0.9.0
+        virtual nixl_status_t
+        createGpuXferReq(const nixlBackendReqH &req_hndl,
+                         const nixl_meta_dlist_t &local_descs,
+                         const nixl_meta_dlist_t &remote_descs,
+                         nixlGpuXferReqH &gpu_req_hndl) const {
+            return NIXL_ERR_NOT_SUPPORTED;
+        }
+
         // Release a GPU transfer request from GPU memory
         virtual void
         releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {}

@@ -322,7 +322,6 @@ class nixlAgent {
         /**
          * @brief  Create a GPU transfer request from a transfer request.
          *
-         *
          * @param  local_descs    [in]  Local descriptor list
          * @param  remote_descs   [in]  Remote descriptor list
          * @param  signal_desc    [in]  Signal descriptor
@@ -340,6 +339,23 @@ class nixlAgent {
                          nixlGpuXferReqH &gpu_req_hndl,
                          nixlXferReqH *&req_hndl,
                          const nixl_opt_args_t *extra_params = nullptr) const;
+
+        /**
+         * @brief  Create a GPU transfer request from a transfer request (Deprecated)
+         *
+         * @deprecated This API will be removed in NIXL version 0.9.0.
+         *
+         * @param  req_hndl     [in]  Transfer request obtained from makeXferReq/createXferReq
+         * @param  gpu_req_hndl [out] GPU transfer request handle
+         * @return nixl_status_t Error code if call was not successful
+         *
+         * @note   This call may block until the associated connection is established.
+         * @note   Requires progress thread to be enabled (enableProgTh=true) when creating the
+         *         backend.
+         */
+        [[deprecated("This API will be removed in NIXL version 0.9.0")]]
+        nixl_status_t
+        createGpuXferReq(const nixlXferReqH &req_hndl, nixlGpuXferReqH &gpu_req_hndl) const;
 
         /**
          * @brief  Release transfer request from GPU memory

@@ -1392,6 +1392,29 @@ nixlAgent::createGpuXferReq(const nixl_xfer_dlist_t &local_descs,
     return NIXL_SUCCESS;
 }
 
+// Deprecated: This API will be removed in NIXL version 0.9.0
+nixl_status_t
+nixlAgent::createGpuXferReq(const nixlXferReqH &req_hndl, nixlGpuXferReqH &gpu_req_hndl) const {
+    if (!req_hndl.engine) {
+        NIXL_ERROR_FUNC << "Invalid request handle[" << &req_hndl << "]: engine is null";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    if (!req_hndl.backendHandle) {
+        NIXL_ERROR_FUNC << "Invalid request handle[" << &req_hndl << "]: backendHandle is null";
+        return NIXL_ERR_INVALID_PARAM;
+    }
+
+    NIXL_SHARED_LOCK_GUARD(data->lock);
+    const auto status = req_hndl.engine->createGpuXferReq(
+        *req_hndl.backendHandle, *req_hndl.initiatorDescs, *req_hndl.targetDescs, gpu_req_hndl);
+    if (status == NIXL_SUCCESS) {
+        data->gpuReqToEngine.emplace(gpu_req_hndl, req_hndl.engine);
+    }
+
+    return status;
+}
+
 void
 nixlAgent::releaseGpuXferReq(nixlGpuXferReqH gpu_req_hndl) const {
     NIXL_SHARED_LOCK_GUARD(data->lock);

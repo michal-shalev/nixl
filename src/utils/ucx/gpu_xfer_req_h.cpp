@@ -154,6 +154,80 @@ createGpuXferReq(const nixlUcxEp &ep,
     return reinterpret_cast<nixlGpuXferReqH>(ucx_handle);
 }
 
+// Deprecated: This API will be removed in NIXL version 0.9.0
+nixlGpuXferReqH
+createGpuXferReq(const nixlUcxEp &ep,
+                 nixlUcxWorker &worker,
+                 const std::vector<nixlUcxMem> &local_mems,
+                 const std::vector<const nixl::ucx::rkey *> &remote_rkeys,
+                 const std::vector<uint64_t> &remote_addrs) {
+    nixl_status_t status = ep.checkTxState();
+    if (status != NIXL_SUCCESS) {
+        throw std::runtime_error("Endpoint not in valid state for creating memory list");
+    }
+
+    if (local_mems.empty() || remote_rkeys.empty() || remote_addrs.empty()) {
+        throw std::invalid_argument("Empty memory, rkey, or address lists provided");
+    }
+
+    if (local_mems.size() != remote_rkeys.size() || local_mems.size() != remote_addrs.size()) {
+        throw std::invalid_argument(
+            "Local memory, remote rkey, and remote address lists must have same size");
+    }
+
+    std::vector<ucp_device_mem_list_elem_t> ucp_elements;
+    ucp_elements.reserve(local_mems.size());
+
+    for (size_t i = 0; i < local_mems.size(); i++) {
+        ucp_device_mem_list_elem_t ucp_elem;
+        ucp_elem.field_mask = UCP_DEVICE_MEM_LIST_ELEM_FIELD_MEMH |
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_RKEY | UCP_DEVICE_MEM_LIST_ELEM_FIELD_LOCAL_ADDR |
+            UCP_DEVICE_MEM_LIST_ELEM_FIELD_REMOTE_ADDR | UCP_DEVICE_MEM_LIST_ELEM_FIELD_LENGTH;
+        ucp_elem.memh = local_mems[i].getMemh();
+        ucp_elem.rkey = remote_rkeys[i]->get();
+        ucp_elem.local_addr = local_mems[i].getBase();
+        ucp_elem.remote_addr = remote_addrs[i];
+        ucp_elem.length = local_mems[i].getSize();
+        ucp_elements.push_back(ucp_elem);
+    }
+
+    ucp_device_mem_list_params_t params;
+    params.field_mask = UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENTS |
+        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_ELEMENT_SIZE |
+        UCP_DEVICE_MEM_LIST_PARAMS_FIELD_NUM_ELEMENTS;
+    params.elements = ucp_elements.data();
+    params.element_size = sizeof(ucp_device_mem_list_elem_t);
+    params.num_elements = ucp_elements.size();
+
+    const auto timeout = get_gpu_xfer_timeout();
+
+    ucp_device_mem_list_handle_h ucx_handle;
+    ucs_status_t ucs_status;
+    const auto start = std::chrono::steady_clock::now();
+    bool timeout_warned = false;
+    while ((ucs_status = ucp_device_mem_list_create(ep.getEp(), &params, &ucx_handle)) ==
+           UCS_ERR_NOT_CONNECTED) {
+        if (!timeout_warned && std::chrono::steady_clock::now() - start > timeout) {
+            NIXL_WARN << "Timeout on creating device memory list has been exceeded (timeout="
+                      << timeout.count() << " ms)";
+            timeout_warned = true;
+        }
+
+        if (worker.progress() == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+
+    if (ucs_status != UCS_OK) {
+        throw std::runtime_error(std::string("Failed to create device memory list: ") +
+                                 ucs_status_string(ucs_status));
+    }
+
+    NIXL_DEBUG << "Created device memory list: ep=" << ep.getEp() << " handle=" << ucx_handle
+               << " num_elements=" << local_mems.size() << " worker=" << &worker;
+    return reinterpret_cast<nixlGpuXferReqH>(ucx_handle);
+}
+
 void
 releaseGpuXferReq(nixlGpuXferReqH gpu_req) noexcept {
     auto ucx_handle = reinterpret_cast<ucp_device_mem_list_handle_h>(gpu_req);
@@ -172,6 +246,17 @@ createGpuXferReq(const nixlUcxEp &ep,
                  uint64_t signal_addr,
                  size_t signal_len,
                  const nixl::ucx::rkey *signal_rkey) {
+    NIXL_ERROR << "UCX GPU device API not supported";
+    throw std::runtime_error("UCX GPU device API not available");
+}
+
+// Deprecated: This API will be removed in NIXL version 0.9.0
+nixlGpuXferReqH
+createGpuXferReq(const nixlUcxEp &ep,
+                 nixlUcxWorker &worker,
+                 const std::vector<nixlUcxMem> &local_mems,
+                 const std::vector<const nixl::ucx::rkey *> &remote_rkeys,
+                 const std::vector<uint64_t> &remote_addrs) {
     NIXL_ERROR << "UCX GPU device API not supported";
     throw std::runtime_error("UCX GPU device API not available");
 }
