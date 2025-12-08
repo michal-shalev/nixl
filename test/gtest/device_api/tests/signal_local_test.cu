@@ -16,6 +16,7 @@
  */
 
 #include "common/device_test_base.cuh"
+#include "common/device_array.h"
 
 namespace gtest::nixl::gpu::signal_local {
 
@@ -57,7 +58,7 @@ protected:
     }
 
     void readAndVerifySignal(const void *signal_addr, uint64_t expected_value, size_t num_threads) {
-        CudaArray<uint64_t> result_ptr(1);
+        deviceArray<uint64_t> result_ptr(1);
 
         NixlDeviceKernelParams params = {};
         params.operation = NixlDeviceOperation::SIGNAL_READ;

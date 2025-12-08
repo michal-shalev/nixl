@@ -16,6 +16,7 @@
  */
 
 #include "common/device_test_base.cuh"
+#include "common/device_array.h"
 #include <random>
 
 namespace gtest::nixl::gpu::signal_post {
@@ -69,7 +70,7 @@ protected:
     }
 
     void verifySignal(TestSetupData &setup_data, uint64_t expected_value) {
-        CudaArray<uint64_t> result_ptr(1);
+        deviceArray<uint64_t> result_ptr(1);
 
         NixlDeviceKernelParams read_params = {};
         read_params.operation = NixlDeviceOperation::SIGNAL_READ;

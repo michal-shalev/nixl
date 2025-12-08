@@ -17,25 +17,27 @@
 
 #include "device_kernels.cuh"
 #include "device_utils.cuh"
+#include "device_array.h"
 
 namespace {
 
-constexpr size_t maxThreadsPerBlock = 256;
+constexpr size_t max_threads_per_block = 1024;
+constexpr size_t warp_size = 32;
 
 template<nixl_gpu_level_t level>
 __device__ constexpr size_t threadsPerRequest() {
     if constexpr (level == nixl_gpu_level_t::THREAD) {
         return 1;
     } else if constexpr (level == nixl_gpu_level_t::WARP) {
-        return 32;
+        return warp_size;
     } else {
-        return maxThreadsPerBlock;
+        return max_threads_per_block;
     }
 }
 
 template<nixl_gpu_level_t level>
 __device__ constexpr size_t sharedRequestCount() {
-    return maxThreadsPerBlock / threadsPerRequest<level>();
+    return max_threads_per_block / threadsPerRequest<level>();
 }
 
 template<nixl_gpu_level_t level>
@@ -147,7 +149,7 @@ kernelJob(const NixlDeviceKernelParams &params,
 
     nixl_status_t &status = result_ptr->status;
 
-    if (blockDim.x > maxThreadsPerBlock) {
+    if (blockDim.x > max_threads_per_block) {
         status = NIXL_ERR_INVALID_PARAM;
         return;
     }
@@ -194,7 +196,7 @@ nixlTestKernel(const NixlDeviceKernelParams params,
 
 NixlDeviceKernelResult
 launchNixlDeviceKernel(const NixlDeviceKernelParams &params) {
-    CudaArray<NixlDeviceKernelResult> result(1);
+    deviceArray<NixlDeviceKernelResult> result(1);
     NixlDeviceKernelResult init_result{NIXL_ERR_INVALID_PARAM};
     result.copyFromHost(&init_result, 1);
 

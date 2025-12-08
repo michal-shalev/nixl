@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef NIXL_DEVICE_API_TEST_CUDA_ARRAY_H
-#define NIXL_DEVICE_API_TEST_CUDA_ARRAY_H
+#ifndef NIXL_DEVICE_API_TEST_DEVICE_ARRAY_H
+#define NIXL_DEVICE_API_TEST_DEVICE_ARRAY_H
 
 #include <cuda_runtime.h>
 
@@ -24,36 +24,26 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <memory>
 
-template<typename T> class CudaArray {
+template<typename T> class deviceArray {
 public:
-    explicit CudaArray(size_t count) : count_(count) {
-        const cudaError_t err = cudaMalloc(&ptr_, count * sizeof(T));
-        if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("CudaArray: cudaMalloc failed: ") +
-                                     cudaGetErrorString(err));
-        }
-    }
+    explicit deviceArray(size_t count)
+        : count_{count}, ptr_{malloc(count), &free} {}
 
-    ~CudaArray() {
-        if (ptr_ != nullptr) {
-            cudaFree(ptr_);
-        }
-    }
-
-    CudaArray(const CudaArray &) = delete;
-    CudaArray &
-    operator=(const CudaArray &) = delete;
+    deviceArray(const deviceArray &) = delete;
+    deviceArray &
+    operator=(const deviceArray &) = delete;
 
     void
     copyFromHost(const T *host_data, size_t count) {
         if (count > count_) {
-            throw std::out_of_range("CudaArray: copy count exceeds array size");
+            throw std::out_of_range("deviceArray: copy count exceeds array size");
         }
         const cudaError_t err =
-            cudaMemcpy(ptr_, host_data, count * sizeof(T), cudaMemcpyHostToDevice);
+            cudaMemcpy(ptr_.get(), host_data, count * sizeof(T), cudaMemcpyHostToDevice);
         if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("CudaArray: cudaMemcpy from host failed: ") +
+            throw std::runtime_error(std::string("deviceArray: cudaMemcpy from host failed: ") +
                                      cudaGetErrorString(err));
         }
     }
@@ -66,19 +56,19 @@ public:
     void
     copyToHost(T *host_data, size_t count) const {
         if (count > count_) {
-            throw std::out_of_range("CudaArray: copy count exceeds array size");
+            throw std::out_of_range("deviceArray: copy count exceeds array size");
         }
         const cudaError_t err =
-            cudaMemcpy(host_data, ptr_, count * sizeof(T), cudaMemcpyDeviceToHost);
+            cudaMemcpy(host_data, ptr_.get(), count * sizeof(T), cudaMemcpyDeviceToHost);
         if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("CudaArray: cudaMemcpy to host failed: ") +
+            throw std::runtime_error(std::string("deviceArray: cudaMemcpy to host failed: ") +
                                      cudaGetErrorString(err));
         }
     }
 
     [[nodiscard]] T *
     get() const noexcept {
-        return ptr_;
+        return ptr_.get();
     }
 
     [[nodiscard]] size_t
@@ -87,8 +77,22 @@ public:
     }
 
 private:
-    T *ptr_;
+    [[nodiscard]] static T *malloc(size_t count) {
+        T *ptr;
+        const cudaError_t err = cudaMalloc(&ptr, count * sizeof(T));
+        if (err != cudaSuccess) {
+            throw std::runtime_error(std::string("deviceArray: cudaMalloc failed: ") +
+                                     cudaGetErrorString(err));
+        }
+        return ptr;
+    }
+
+    static void free(T *ptr) {
+        cudaFree(ptr);
+    }
+
     size_t count_;
+    const std::unique_ptr<T, void (*)(T*)> ptr_;
 };
 
-#endif // NIXL_DEVICE_API_TEST_CUDA_ARRAY_H
+#endif // NIXL_DEVICE_API_TEST_DEVICE_ARRAY_H

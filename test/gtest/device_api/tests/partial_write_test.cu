@@ -17,6 +17,7 @@
 
 #include "common/device_test_base.cuh"
 #include "common/device_kernels.cuh"
+#include "common/device_array.h"
 #include <algorithm>
 
 namespace gtest::nixl::gpu::partial_write {
@@ -73,10 +74,10 @@ protected:
             indices_host[i] = static_cast<unsigned>(i);
         }
 
-        CudaArray<unsigned> indices_gpu(data_buf_count);
-        CudaArray<size_t> sizes_gpu(data_buf_count);
-        CudaArray<size_t> local_offsets_gpu(data_buf_count);
-        CudaArray<size_t> remote_offsets_gpu(data_buf_count);
+        deviceArray<unsigned> indices_gpu(data_buf_count);
+        deviceArray<size_t> sizes_gpu(data_buf_count);
+        deviceArray<size_t> local_offsets_gpu(data_buf_count);
+        deviceArray<size_t> remote_offsets_gpu(data_buf_count);
 
         indices_gpu.copyFromHost(indices_host);
         sizes_gpu.copyFromHost(sizes);

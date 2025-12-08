@@ -32,7 +32,6 @@
 #include <gtest/gtest.h>
 #include <tuple>
 #include <iostream>
-#include "cuda_array.h"
 #include "mem_buffer.h"
 #include "device_kernels.cuh"
 
