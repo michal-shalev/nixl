@@ -720,6 +720,50 @@ TEST_P(TestTransfer, PrepGpuSignal) {
 #endif
 }
 
+TEST_P(TestTransfer, getMappedPtrs) {
+    constexpr size_t buffer_size = 4096;
+    constexpr size_t num_buffers = 3;
+
+    if (!hasCudaGpu()) {
+        GTEST_SKIP() << "No CUDA-capable GPU is available, skipping test.";
+    }
+
+    std::vector<MemBuffer> buffers_local;
+    std::vector<MemBuffer> buffers_remote;
+
+    createRegisteredMem(getAgent(0), buffer_size, num_buffers, VRAM_SEG, buffers_local);
+    createRegisteredMem(getAgent(1), buffer_size, num_buffers, VRAM_SEG, buffers_remote);
+
+    exchangeMDIP(0, 1);
+
+    nixl_opt_args_t conn_params = {.backends = {backend_handles[0]}};
+    nixl_status_t conn_status = getAgent(0).makeConnection(getAgentName(1), &conn_params);
+    ASSERT_EQ(conn_status, NIXL_SUCCESS) << "makeConnection failed for VRAM";
+
+    auto remote_desc_list = makeDescList<nixlBasicDesc>(buffers_remote, VRAM_SEG);
+
+    nixlDlistH *dlist_hndl = nullptr;
+    nixl_opt_args_t extra_params = {.backends = {backend_handles[0]}};
+
+    nixl_status_t status =
+        getAgent(0).prepXferDlist(getAgentName(1), remote_desc_list, dlist_hndl, &extra_params);
+    ASSERT_EQ(status, NIXL_SUCCESS) << "prepXferDlist failed for VRAM";
+    ASSERT_NE(dlist_hndl, nullptr);
+
+    std::vector<void *> ptrs;
+    status = getAgent(0).getMappedPtrs(dlist_hndl, ptrs, &extra_params);
+    ASSERT_EQ(status, NIXL_SUCCESS) << "getMappedPtrs failed for VRAM";
+    ASSERT_EQ(ptrs.size(), num_buffers) << "Wrong number of pointers returned for VRAM";
+
+    for (size_t i = 0; i < ptrs.size(); ++i) {
+        EXPECT_NE(ptrs[i], nullptr) << "Buffer " << i << " returned null pointer";
+    }
+
+    getAgent(0).releasedDlistH(dlist_hndl);
+    deregisterMem(getAgent(0), buffers_local, VRAM_SEG);
+    deregisterMem(getAgent(1), buffers_remote, VRAM_SEG);
+}
+
 NIXL_INSTANTIATE_TEST(ucx, TestTransfer, "UCX", true, 2, 0, "");
 NIXL_INSTANTIATE_TEST(ucx_no_pt, TestTransfer, "UCX", false, 2, 0, "");
 NIXL_INSTANTIATE_TEST(ucx_threadpool, TestTransfer, "UCX", true, 6, 4, "");
