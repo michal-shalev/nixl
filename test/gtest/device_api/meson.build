@@ -19,7 +19,7 @@ device_api_test_sources = files(
     'common/device_test_base.cu',
     'tests/single_write_test.cu',
     'tests/partial_write_test.cu',
-    'tests/full_write_test.cu',
+    'tests/write_test.cu',
     'tests/signal_post_test.cu',
     'tests/signal_local_test.cu',
 )

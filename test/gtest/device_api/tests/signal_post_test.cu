@@ -70,25 +70,18 @@ protected:
     }
 
     void verifySignal(TestSetupData &setup_data, uint64_t expected_value) {
-        deviceArray<uint64_t> result_ptr(1);
-
         NixlDeviceKernelParams read_params = {};
-        read_params.operation = NixlDeviceOperation::SIGNAL_READ;
+        read_params.operation = NixlDeviceOperation::SIGNAL_WAIT;
         read_params.level = getLevel();
         read_params.numThreads = defaultNumThreads;
         read_params.numBlocks = 1;
         read_params.numIters = 1;
 
-        read_params.signalRead.signalAddr = setup_data.dstBuffers[0].get();
-        read_params.signalRead.expectedValue = expected_value;
-        read_params.signalRead.resultPtr = result_ptr.get();
+        read_params.signalWait.signalAddr = setup_data.dstBuffers[0].get();
+        read_params.signalWait.expectedValue = expected_value;
 
         auto result = launchNixlDeviceKernel(read_params);
         ASSERT_EQ(result.status, NIXL_SUCCESS);
-
-        uint64_t signal_value = 0;
-        result_ptr.copyToHost(&signal_value, 1);
-        ASSERT_EQ(signal_value, expected_value);
     }
 };
 

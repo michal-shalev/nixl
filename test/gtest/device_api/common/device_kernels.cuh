@@ -25,9 +25,9 @@
 enum class NixlDeviceOperation : uint64_t {
     SINGLE_WRITE,
     PARTIAL_WRITE,
-    FULL_WRITE,
+    WRITE,
     SIGNAL_POST,
-    SIGNAL_READ,
+    SIGNAL_WAIT,
     SIGNAL_WRITE
 };
 
@@ -65,7 +65,7 @@ struct NixlDeviceKernelParams {
     struct {
         uint64_t signalInc;
         unsigned channelId;
-    } fullWrite;
+    } write;
 
     struct {
         unsigned signalDescIndex;
@@ -77,8 +77,7 @@ struct NixlDeviceKernelParams {
     struct {
         const void *signalAddr;
         uint64_t expectedValue;
-        uint64_t *resultPtr;
-    } signalRead;
+    } signalWait;
 
     struct {
         void *signalAddr;

@@ -99,16 +99,16 @@ struct TestNameGenerator {
 };
 
 [[nodiscard]] inline nixl_status_t checkCudaErrors() {
-    const cudaError_t sync_error = cudaDeviceSynchronize();
+    // Check launch errors first (before sync might consume them)
     const cudaError_t launch_error = cudaGetLastError();
+    if (launch_error != cudaSuccess) {
+        std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(launch_error) << "\n";
+        return NIXL_ERR_BACKEND;
+    }
 
-    if (sync_error != cudaSuccess || launch_error != cudaSuccess) {
-        if (sync_error != cudaSuccess) {
-            std::cerr << "CUDA synchronization error: " << cudaGetErrorString(sync_error) << "\n";
-        }
-        if (launch_error != cudaSuccess) {
-            std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(launch_error) << "\n";
-        }
+    const cudaError_t sync_error = cudaDeviceSynchronize();
+    if (sync_error != cudaSuccess) {
+        std::cerr << "CUDA synchronization error: " << cudaGetErrorString(sync_error) << "\n";
         return NIXL_ERR_BACKEND;
     }
 

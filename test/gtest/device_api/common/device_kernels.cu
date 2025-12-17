@@ -22,22 +22,39 @@
 namespace {
 
 constexpr size_t max_threads_per_block = 1024;
-constexpr size_t warp_size = 32;
 
 template<nixl_gpu_level_t level>
-__device__ constexpr size_t threadsPerRequest() {
+__device__ size_t threadsPerRequest() {
     if constexpr (level == nixl_gpu_level_t::THREAD) {
         return 1;
     } else if constexpr (level == nixl_gpu_level_t::WARP) {
-        return warp_size;
+        return warpSize;
     } else {
         return max_threads_per_block;
     }
 }
 
 template<nixl_gpu_level_t level>
-__device__ constexpr size_t sharedRequestCount() {
-    return max_threads_per_block / threadsPerRequest<level>();
+__device__ size_t getStatusIndex() {
+    if constexpr (level == nixl_gpu_level_t::THREAD) {
+        return threadIdx.x;
+    } else if constexpr (level == nixl_gpu_level_t::WARP) {
+        return threadIdx.x / warpSize;
+    } else {
+        return 0;
+    }
+}
+
+template<nixl_gpu_level_t level>
+size_t sharedRequestCount(size_t num_threads) {
+    if constexpr (level == nixl_gpu_level_t::THREAD) {
+        return num_threads;
+    } else if constexpr (level == nixl_gpu_level_t::WARP) {
+        // Use 32 for calculation since warpSize is not available on host
+        return (num_threads + 31) / 32;
+    } else {
+        return 1;
+    }
 }
 
 template<nixl_gpu_level_t level>
@@ -75,11 +92,11 @@ doOperation(const NixlDeviceKernelParams &params,
             req_ptr);
         break;
 
-    case NixlDeviceOperation::FULL_WRITE:
+    case NixlDeviceOperation::WRITE:
         status = nixlGpuPostWriteXferReq<level>(
             params.reqHandle,
-            params.fullWrite.signalInc,
-            params.fullWrite.channelId,
+            params.write.signalInc,
+            params.write.channelId,
             params.withNoDelay,
             req_ptr);
         break;
@@ -95,32 +112,34 @@ doOperation(const NixlDeviceKernelParams &params,
             req_ptr);
         break;
 
-    case NixlDeviceOperation::SIGNAL_READ: {
-        if (params.signalRead.signalAddr == nullptr) {
-            return NIXL_ERR_INVALID_PARAM;
+    case NixlDeviceOperation::SIGNAL_WAIT: {
+        if (params.signalWait.signalAddr == nullptr) {
+            status = NIXL_ERR_INVALID_PARAM;
+            break;
         }
 
         uint64_t value;
         do {
-            value = nixlGpuReadSignal<level>(params.signalRead.signalAddr);
-        } while (value != params.signalRead.expectedValue);
+            value = nixlGpuReadSignal<level>(params.signalWait.signalAddr);
+        } while (value != params.signalWait.expectedValue);
 
-        if (params.signalRead.resultPtr != nullptr) {
-            *params.signalRead.resultPtr = value;
-        }
-        return NIXL_SUCCESS;
+        status = NIXL_SUCCESS;
+        break;
     }
 
     case NixlDeviceOperation::SIGNAL_WRITE:
         if (params.signalWrite.signalAddr == nullptr) {
-            return NIXL_ERR_INVALID_PARAM;
+            status = NIXL_ERR_INVALID_PARAM;
+            break;
         }
         nixlGpuWriteSignal<level>(params.signalWrite.signalAddr,
                                   params.signalWrite.value);
-        return NIXL_SUCCESS;
+        status = NIXL_SUCCESS;
+        break;
 
     default:
-        return NIXL_ERR_INVALID_PARAM;
+        status = NIXL_ERR_INVALID_PARAM;
+        break;
     }
 
     if (status != NIXL_IN_PROG) {
@@ -142,7 +161,8 @@ doOperation(const NixlDeviceKernelParams &params,
 template<nixl_gpu_level_t level>
 __device__ void
 kernelJob(const NixlDeviceKernelParams &params,
-          NixlDeviceKernelResult *result_ptr) {
+          NixlDeviceKernelResult *result_ptr,
+          nixlGpuXferStatusH *shared_reqs) {
     if (result_ptr == nullptr) {
         return;
     }
@@ -159,10 +179,9 @@ kernelJob(const NixlDeviceKernelParams &params,
         return;
     }
 
-    __shared__ nixlGpuXferStatusH shared_reqs[sharedRequestCount<level>()];
     nixlGpuXferStatusH *req_ptr = nullptr;
     if (params.withRequest) {
-        const size_t req_index = threadIdx.x / threadsPerRequest<level>();
+        const size_t req_index = getStatusIndex<level>();
         req_ptr = &shared_reqs[req_index];
     }
 
@@ -178,7 +197,7 @@ kernelJob(const NixlDeviceKernelParams &params,
     params_force_completion.withNoDelay = true;
     nixlGpuXferStatusH *status_ptr = nullptr;
     if (params.withRequest) {
-        const size_t req_index = threadIdx.x / threadsPerRequest<level>();
+        const size_t req_index = getStatusIndex<level>();
         status_ptr = &shared_reqs[req_index];
     }
     status = doOperation<level>(params_force_completion, status_ptr);
@@ -188,7 +207,8 @@ template<nixl_gpu_level_t level>
 __global__ void
 nixlTestKernel(const NixlDeviceKernelParams params,
                NixlDeviceKernelResult *result_ptr) {
-    kernelJob<level>(params, result_ptr);
+    extern __shared__ nixlGpuXferStatusH shared_reqs[];
+    kernelJob<level>(params, result_ptr, shared_reqs);
     __threadfence_system();
 }
 
@@ -200,18 +220,22 @@ launchNixlDeviceKernel(const NixlDeviceKernelParams &params) {
     NixlDeviceKernelResult init_result{NIXL_ERR_INVALID_PARAM};
     result.copyFromHost(&init_result, 1);
 
+    size_t shared_mem_size = 0;
     switch (params.level) {
     case nixl_gpu_level_t::THREAD:
+        shared_mem_size = sharedRequestCount<nixl_gpu_level_t::THREAD>(params.numThreads) * sizeof(nixlGpuXferStatusH);
         nixlTestKernel<nixl_gpu_level_t::THREAD>
-            <<<params.numBlocks, params.numThreads>>>(params, result.get());
+            <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;
     case nixl_gpu_level_t::WARP:
+        shared_mem_size = sharedRequestCount<nixl_gpu_level_t::WARP>(params.numThreads) * sizeof(nixlGpuXferStatusH);
         nixlTestKernel<nixl_gpu_level_t::WARP>
-            <<<params.numBlocks, params.numThreads>>>(params, result.get());
+            <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;
     case nixl_gpu_level_t::BLOCK:
+        shared_mem_size = sharedRequestCount<nixl_gpu_level_t::BLOCK>(params.numThreads) * sizeof(nixlGpuXferStatusH);
         nixlTestKernel<nixl_gpu_level_t::BLOCK>
-            <<<params.numBlocks, params.numThreads>>>(params, result.get());
+            <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;
     default: {
         NixlDeviceKernelResult error_result{NIXL_ERR_INVALID_PARAM};

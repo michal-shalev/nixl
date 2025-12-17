@@ -37,15 +37,7 @@ public:
 
     void
     copyFromHost(const T *host_data, size_t count) {
-        if (count > count_) {
-            throw std::out_of_range("deviceArray: copy count exceeds array size");
-        }
-        const cudaError_t err =
-            cudaMemcpy(ptr_.get(), host_data, count * sizeof(T), cudaMemcpyHostToDevice);
-        if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("deviceArray: cudaMemcpy from host failed: ") +
-                                     cudaGetErrorString(err));
-        }
+        copy(ptr_.get(), host_data, count, cudaMemcpyHostToDevice);
     }
 
     void
@@ -55,15 +47,7 @@ public:
 
     void
     copyToHost(T *host_data, size_t count) const {
-        if (count > count_) {
-            throw std::out_of_range("deviceArray: copy count exceeds array size");
-        }
-        const cudaError_t err =
-            cudaMemcpy(host_data, ptr_.get(), count * sizeof(T), cudaMemcpyDeviceToHost);
-        if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("deviceArray: cudaMemcpy to host failed: ") +
-                                     cudaGetErrorString(err));
-        }
+        copy(host_data, ptr_.get(), count, cudaMemcpyDeviceToHost);
     }
 
     [[nodiscard]] T *
@@ -77,6 +61,18 @@ public:
     }
 
 private:
+    void
+    copy(void *dst, const void *src, size_t count, cudaMemcpyKind kind) const {
+        if (count > count_) {
+            throw std::out_of_range("deviceArray: copy count exceeds array size");
+        }
+        const cudaError_t err = cudaMemcpy(dst, src, count * sizeof(T), kind);
+        if (err != cudaSuccess) {
+            throw std::runtime_error(std::string("deviceArray: cudaMemcpy failed: ") +
+                                     cudaGetErrorString(err));
+        }
+    }
+
     [[nodiscard]] static T *malloc(size_t count) {
         T *ptr;
         const cudaError_t err = cudaMalloc(&ptr, count * sizeof(T));

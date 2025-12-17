@@ -26,40 +26,6 @@ namespace {
 
 class PartialWriteTest : public DeviceApiTestBase<DeviceTestParams> {
 protected:
-    void setupPartialWrite(const std::vector<size_t> &sizes, TestSetupData &data) {
-        constexpr nixl_mem_t mem_type = VRAM_SEG;
-        const size_t data_buf_count = sizes.size();
-
-        for (size_t i = 0; i < data_buf_count; ++i) {
-            data.srcBuffers.emplace_back(sizes[i], mem_type);
-            data.dstBuffers.emplace_back(sizes[i], mem_type);
-        }
-
-        nixl_opt_args_t signal_params = {.backends = {backendHandles_[receiverAgent]}};
-        size_t signal_size;
-        nixl_status_t status =
-            getAgent(receiverAgent).getGpuSignalSize(signal_size, &signal_params);
-        ASSERT_EQ(status, NIXL_SUCCESS) << "getGpuSignalSize failed";
-
-        // Add dummy signal buffer
-        // TODO: Remove after implementing new createGpuXferReq API
-        data.srcBuffers.emplace_back(signal_size, mem_type);
-        data.dstBuffers.emplace_back(signal_size, mem_type);
-
-        registerMem(getAgent(senderAgent), data.srcBuffers, mem_type);
-        registerMem(getAgent(receiverAgent), data.dstBuffers, mem_type);
-
-        std::vector<MemBuffer> signal_only = {data.dstBuffers.back()};
-        auto signal_desc_list = makeDescList<nixlBlobDesc>(signal_only, mem_type);
-        status = getAgent(receiverAgent).prepGpuSignal(signal_desc_list, &signal_params);
-        ASSERT_EQ(status, NIXL_SUCCESS) << "prepGpuSignal failed";
-
-        ASSERT_NO_FATAL_FAILURE(exchangeMD(senderAgent, receiverAgent));
-
-        createXferRequest(data.srcBuffers, data.dstBuffers, mem_type,
-                         data.xferReq, data.gpuReqHandle);
-    }
-
     void runPartialWrite(const TestSetupData &setup_data,
                         const std::vector<size_t> &sizes,
                         size_t num_iters,
@@ -120,7 +86,7 @@ TEST_P(PartialWriteTest, Basic) {
 
     TestSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupPartialWrite(sizes, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters,
@@ -134,7 +100,7 @@ TEST_P(PartialWriteTest, WithoutSignal) {
 
     TestSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupPartialWrite(sizes, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters,
@@ -147,7 +113,7 @@ TEST_P(PartialWriteTest, SignalOnly) {
 
     TestSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupPartialWrite(sizes, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters,
                                             testSignalIncrement));
