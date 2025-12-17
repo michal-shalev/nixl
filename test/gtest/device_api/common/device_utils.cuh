@@ -99,7 +99,6 @@ struct TestNameGenerator {
 };
 
 [[nodiscard]] inline nixl_status_t checkCudaErrors() {
-    // Check launch errors first (before sync might consume them)
     const cudaError_t launch_error = cudaGetLastError();
     if (launch_error != cudaSuccess) {
         std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(launch_error) << "\n";

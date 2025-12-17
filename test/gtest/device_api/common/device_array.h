@@ -28,8 +28,7 @@
 
 template<typename T> class deviceArray {
 public:
-    explicit deviceArray(size_t count)
-        : count_{count}, ptr_{malloc(count), &free} {}
+    explicit deviceArray(size_t count) : count_{count}, ptr_{malloc(count), &free} {}
 
     deviceArray(const deviceArray &) = delete;
     deviceArray &
@@ -73,7 +72,8 @@ private:
         }
     }
 
-    [[nodiscard]] static T *malloc(size_t count) {
+    [[nodiscard]] static T *
+    malloc(size_t count) {
         T *ptr;
         const cudaError_t err = cudaMalloc(&ptr, count * sizeof(T));
         if (err != cudaSuccess) {
@@ -83,12 +83,13 @@ private:
         return ptr;
     }
 
-    static void free(T *ptr) {
+    static void
+    free(T *ptr) {
         cudaFree(ptr);
     }
 
     size_t count_;
-    const std::unique_ptr<T, void (*)(T*)> ptr_;
+    const std::unique_ptr<T, void (*)(T *)> ptr_;
 };
 
 #endif // NIXL_DEVICE_API_TEST_DEVICE_ARRAY_H
