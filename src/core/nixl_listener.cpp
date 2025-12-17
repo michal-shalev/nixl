@@ -307,7 +307,8 @@ public:
                            << " (rev " << response.value().modified_index() << ")";
                 return NIXL_SUCCESS;
             } else {
-                NIXL_ERROR << "Failed to fetch key: " << metadata_key << " from etcd: " << response.error_message();
+                NIXL_INFO << "Failed to fetch key: " << metadata_key
+                          << " from etcd: " << response.error_message();
                 return NIXL_ERR_NOT_FOUND;
             }
         }
@@ -408,8 +409,9 @@ public:
                 std::lock_guard<std::mutex> lock(invalidated_agents_mutex);
                 invalidated_agents.push_back(agent_name);
             } else {
-                NIXL_ERROR << "Watcher for " << event.kv().key() << " received unexpected event from etcd: "
-                           << event.event_type();
+                NIXL_ERROR << "Watcher for " << event.kv().key()
+                           << " received unexpected event from etcd: "
+                           << static_cast<int>(event.event_type());
             }
         };
 
