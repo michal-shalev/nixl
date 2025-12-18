@@ -156,8 +156,7 @@ doOperation(const nixlDeviceKernelParams &params, nixlGpuXferStatusH *req_ptr) {
 
 template<nixl_gpu_level_t level>
 __device__ nixl_status_t
-kernelJob(const nixlDeviceKernelParams &params,
-          nixlGpuXferStatusH *shared_reqs) {
+kernelJob(const nixlDeviceKernelParams &params, nixlGpuXferStatusH *shared_reqs) {
     if (blockDim.x > max_threads_per_block) {
         return NIXL_ERR_INVALID_PARAM;
     }

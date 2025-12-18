@@ -172,8 +172,7 @@ template<typename paramType>
 void
 deviceApiTestBase<paramType>::launchAndCheckKernel(const nixlDeviceKernelParams &params) {
     const nixl_status_t status = launchNixlDeviceKernel(params);
-    ASSERT_EQ(status, NIXL_SUCCESS)
-        << "Kernel execution failed with status: " << status;
+    ASSERT_EQ(status, NIXL_SUCCESS) << "Kernel execution failed with status: " << status;
 }
 
 template<typename paramType>
