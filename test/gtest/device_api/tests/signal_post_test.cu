@@ -55,7 +55,7 @@ namespace {
                       unsigned channel_id) {
             constexpr size_t signal_offset = 0;
 
-            nixlDeviceKernelParams post_params = {};
+            nixlDeviceKernelParams post_params;
             post_params.operation = nixl_device_operation_t::SIGNAL_POST;
             post_params.level = getLevel();
             post_params.numThreads = defaultNumThreads;
@@ -76,7 +76,7 @@ namespace {
 
         void
         verifySignal(testSetupData &setup_data, uint64_t expected_value) {
-            nixlDeviceKernelParams read_params = {};
+            nixlDeviceKernelParams read_params;
             read_params.operation = nixl_device_operation_t::SIGNAL_WAIT;
             read_params.level = getLevel();
             read_params.numThreads = defaultNumThreads;
