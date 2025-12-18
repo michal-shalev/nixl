@@ -17,7 +17,7 @@
 
 #include "device_kernels.cuh"
 #include "device_utils.cuh"
-#include "device_array.h"
+#include "test_array.h"
 
 namespace {
 
@@ -216,7 +216,7 @@ nixlTestKernel(const nixlDeviceKernelParams params,
 
 nixlDeviceKernelResult
 launchNixlDeviceKernel(const nixlDeviceKernelParams &params) {
-    deviceArray<nixlDeviceKernelResult> result(1);
+    testArray<nixlDeviceKernelResult> result(1);
     nixlDeviceKernelResult init_result{NIXL_ERR_INVALID_PARAM};
     result.copyFromHost(&init_result, 1);
 

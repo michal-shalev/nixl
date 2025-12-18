@@ -57,7 +57,7 @@ void deviceApiTestBase<paramType>::TearDown() {
 
 template<typename paramType>
 void deviceApiTestBase<paramType>::registerMem(nixlAgent &agent,
-                                   const std::vector<memBuffer> &buffers,
+                                   const std::vector<testArray<uint8_t>> &buffers,
                                    nixl_mem_t mem_type) {
     auto reg_list = makeDescList<nixlBlobDesc>(buffers, mem_type);
     agent.registerMem(reg_list);
@@ -93,7 +93,7 @@ void deviceApiTestBase<paramType>::invalidateMD() {
 
 template<typename paramType>
 void deviceApiTestBase<paramType>::createRegisteredMem(nixlAgent &agent, size_t size, size_t count,
-                                           nixl_mem_t mem_type, std::vector<memBuffer> &buffers_out) {
+                                           nixl_mem_t mem_type, std::vector<testArray<uint8_t>> &buffers_out) {
     while (count-- != 0) {
         buffers_out.emplace_back(size, mem_type);
     }
@@ -111,8 +111,8 @@ std::string deviceApiTestBase<paramType>::getAgentName(size_t idx) {
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::createXferRequest(const std::vector<memBuffer> &src_buffers,
-                                         const std::vector<memBuffer> &dst_buffers,
+void deviceApiTestBase<paramType>::createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
+                                         const std::vector<testArray<uint8_t>> &dst_buffers,
                                          nixl_mem_t mem_type,
                                          nixlXferReqH *&xfer_req,
                                          nixlGpuXferReqH &gpu_req_handle,
@@ -188,8 +188,11 @@ void deviceApiTestBase<paramType>::setupWithSignal(const std::vector<size_t> &si
     registerMem(getAgent(senderAgent), setup_data.srcBuffers, mem_type);
     registerMem(getAgent(receiverAgent), setup_data.dstBuffers, mem_type);
 
-    std::vector<memBuffer> signal_only = {setup_data.dstBuffers.back()};
-    auto signal_desc_list = makeDescList<nixlBlobDesc>(signal_only, mem_type);
+    // Create signal descriptor list from just the last buffer
+    nixlDescList<nixlBlobDesc> signal_desc_list(mem_type);
+    const auto &signal_buffer = setup_data.dstBuffers.back();
+    signal_desc_list.addDesc(nixlBlobDesc(reinterpret_cast<uintptr_t>(signal_buffer.get()),
+                                          signal_buffer.size(), uint64_t(deviceId_)));
     status = getAgent(receiverAgent).prepGpuSignal(signal_desc_list, &signal_params);
     ASSERT_EQ(status, NIXL_SUCCESS);
 

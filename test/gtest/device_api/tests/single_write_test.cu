@@ -49,7 +49,7 @@ TEST_P(singleWriteTest, Basic) {
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWriteTest(size, count, VRAM_SEG, setup_data));
 
-    auto *src = static_cast<uint32_t *>(setup_data.srcBuffers[0].get());
+    auto *src = reinterpret_cast<uint32_t *>(setup_data.srcBuffers[0].get());
     constexpr uint32_t pattern = testPattern2;
     cudaMemset(src, 0, size);
     cudaMemcpy(src, &pattern, sizeof(pattern), cudaMemcpyHostToDevice);
@@ -57,7 +57,7 @@ TEST_P(singleWriteTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(runTest(setup_data, size, defaultNumIters));
 
     uint32_t dst;
-    cudaMemcpy(&dst, static_cast<uint32_t *>(setup_data.dstBuffers[0].get()),
+    cudaMemcpy(&dst, reinterpret_cast<uint32_t *>(setup_data.dstBuffers[0].get()),
                sizeof(uint32_t), cudaMemcpyDeviceToHost);
     ASSERT_EQ(dst, pattern);
 }
@@ -67,8 +67,8 @@ TEST_P(singleWriteTest, MultipleWorkers) {
     constexpr size_t size = 4096;
     constexpr size_t num_iters = 100;
 
-    std::vector<std::vector<memBuffer>> src_buffers(numUcxWorkers);
-    std::vector<std::vector<memBuffer>> dst_buffers(numUcxWorkers);
+    std::vector<std::vector<testArray<uint8_t>>> src_buffers(numUcxWorkers);
+    std::vector<std::vector<testArray<uint8_t>>> dst_buffers(numUcxWorkers);
     std::vector<std::vector<uint32_t>> patterns(numUcxWorkers);
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {

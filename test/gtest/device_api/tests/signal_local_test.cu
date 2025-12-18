@@ -16,7 +16,7 @@
  */
 
 #include "common/device_test_base.cuh"
-#include "common/device_array.h"
+#include "common/test_array.h"
 
 namespace gtest::nixl::gpu::signal_local {
 
@@ -24,7 +24,7 @@ namespace {
 
 class signalLocalTest : public deviceApiTestBase<nixl_gpu_level_t> {
 protected:
-    std::vector<memBuffer> signalBuffers_;
+    std::vector<testArray<uint8_t>> signalBuffers_;
 
     void setupLocalSignal(size_t &signal_size) {
         nixl_opt_args_t extra_params = {.backends = {backendHandles_[senderAgent]}};

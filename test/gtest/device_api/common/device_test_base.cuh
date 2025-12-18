@@ -24,6 +24,7 @@
 #include "common.h"
 #include "device_utils.cuh"
 #include "device_kernels.cuh"
+#include "test_array.h"
 
 #include <cuda_runtime.h>
 #include <absl/strings/str_format.h>
@@ -120,8 +121,8 @@ protected:
     static constexpr unsigned defaultChannelId = 0;
 
     struct testSetupData {
-        std::vector<memBuffer> srcBuffers;
-        std::vector<memBuffer> dstBuffers;
+        std::vector<testArray<uint8_t>> srcBuffers;
+        std::vector<testArray<uint8_t>> dstBuffers;
         nixlXferReqH *xferReq = nullptr;
         nixlGpuXferReqH gpuReqHandle = nullptr;
 
@@ -183,26 +184,26 @@ protected:
 
     template<typename descType>
     [[nodiscard]] nixlDescList<descType>
-    makeDescList(const std::vector<memBuffer> &buffers, nixl_mem_t mem_type) {
+    makeDescList(const std::vector<testArray<uint8_t>> &buffers, nixl_mem_t mem_type) {
         nixlDescList<descType> desc_list(mem_type);
         for (const auto &buffer : buffers) {
-            desc_list.addDesc(descType(buffer.toUintptr(), buffer.getSize(), uint64_t(deviceId_)));
+            desc_list.addDesc(descType(reinterpret_cast<uintptr_t>(buffer.get()), buffer.size(), uint64_t(deviceId_)));
         }
         return desc_list;
     }
 
-    void registerMem(nixlAgent &agent, const std::vector<memBuffer> &buffers, nixl_mem_t mem_type);
+    void registerMem(nixlAgent &agent, const std::vector<testArray<uint8_t>> &buffers, nixl_mem_t mem_type);
     void exchangeMD(size_t from_agent, size_t to_agent);
     void invalidateMD();
 
     void createRegisteredMem(nixlAgent &agent, size_t size, size_t count,
-                            nixl_mem_t mem_type, std::vector<memBuffer> &buffers_out);
+                            nixl_mem_t mem_type, std::vector<testArray<uint8_t>> &buffers_out);
 
     [[nodiscard]] nixlAgent &getAgent(size_t idx);
     [[nodiscard]] std::string getAgentName(size_t idx);
 
-    void createXferRequest(const std::vector<memBuffer> &src_buffers,
-                          const std::vector<memBuffer> &dst_buffers,
+    void createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
+                          const std::vector<testArray<uint8_t>> &dst_buffers,
                           nixl_mem_t mem_type,
                           nixlXferReqH *&xfer_req,
                           nixlGpuXferReqH &gpu_req_handle,

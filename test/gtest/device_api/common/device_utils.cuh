@@ -32,7 +32,6 @@
 #include <gtest/gtest.h>
 #include <tuple>
 #include <iostream>
-#include "mem_buffer.h"
 #include "device_kernels.cuh"
 
 enum class send_mode_t {

@@ -16,7 +16,7 @@
  */
 
 #include "common/device_test_base.cuh"
-#include "common/device_array.h"
+#include "common/test_array.h"
 #include <random>
 
 namespace gtest::nixl::gpu::signal_post {
