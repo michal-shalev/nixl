@@ -24,60 +24,62 @@ namespace gtest::nixl::gpu::partial_write {
 
 namespace {
 
-class partialWriteTest : public deviceApiTestBase<device_test_params_t> {
-protected:
-    void runPartialWrite(const testSetupData &setup_data,
+    class partialWriteTest : public deviceApiTestBase<device_test_params_t> {
+    protected:
+        void
+        runPartialWrite(const testSetupData &setup_data,
                         const std::vector<size_t> &sizes,
                         size_t num_iters,
                         uint64_t signal_inc) {
-        const size_t data_buf_count = sizes.size();
+            const size_t data_buf_count = sizes.size();
 
-        std::vector<unsigned> indices_host(data_buf_count);
-        std::vector<size_t> local_offsets_host(data_buf_count, 0);
-        std::vector<size_t> remote_offsets_host(data_buf_count, 0);
+            std::vector<unsigned> indices_host(data_buf_count);
+            std::vector<size_t> local_offsets_host(data_buf_count, 0);
+            std::vector<size_t> remote_offsets_host(data_buf_count, 0);
 
-        for (size_t i = 0; i < data_buf_count; ++i) {
-            indices_host[i] = static_cast<unsigned>(i);
+            for (size_t i = 0; i < data_buf_count; ++i) {
+                indices_host[i] = static_cast<unsigned>(i);
+            }
+
+            testArray<unsigned> indices_gpu(data_buf_count);
+            testArray<size_t> sizes_gpu(data_buf_count);
+            testArray<size_t> local_offsets_gpu(data_buf_count);
+            testArray<size_t> remote_offsets_gpu(data_buf_count);
+
+            indices_gpu.copyFromHost(indices_host);
+            sizes_gpu.copyFromHost(sizes);
+            local_offsets_gpu.copyFromHost(local_offsets_host);
+            remote_offsets_gpu.copyFromHost(remote_offsets_host);
+
+            const unsigned signal_desc_index =
+                static_cast<unsigned>(setup_data.dstBuffers.size() - 1);
+            constexpr size_t signal_offset = 0;
+
+            nixlDeviceKernelParams params = {};
+            params.operation = nixl_device_operation_t::PARTIAL_WRITE;
+            params.level = getLevel();
+            params.numThreads = defaultNumThreads;
+            params.numBlocks = 1;
+            params.numIters = num_iters;
+            params.reqHandle = setup_data.gpuReqHandle;
+
+            applySendMode(params, getSendMode());
+
+            params.partialWrite.count = data_buf_count;
+            params.partialWrite.descIndices = indices_gpu.get();
+            params.partialWrite.sizes = sizes_gpu.get();
+            params.partialWrite.localOffsets = local_offsets_gpu.get();
+            params.partialWrite.remoteOffsets = remote_offsets_gpu.get();
+            params.partialWrite.signalDescIndex = signal_desc_index;
+            params.partialWrite.signalInc = signal_inc;
+            params.partialWrite.signalOffset = signal_offset;
+            params.partialWrite.channelId = defaultChannelId;
+
+            const auto result = launchNixlDeviceKernel(params);
+            ASSERT_EQ(result.status, NIXL_SUCCESS)
+                << "Kernel execution failed with status: " << result.status;
         }
-
-        testArray<unsigned> indices_gpu(data_buf_count);
-        testArray<size_t> sizes_gpu(data_buf_count);
-        testArray<size_t> local_offsets_gpu(data_buf_count);
-        testArray<size_t> remote_offsets_gpu(data_buf_count);
-
-        indices_gpu.copyFromHost(indices_host);
-        sizes_gpu.copyFromHost(sizes);
-        local_offsets_gpu.copyFromHost(local_offsets_host);
-        remote_offsets_gpu.copyFromHost(remote_offsets_host);
-
-        const unsigned signal_desc_index = static_cast<unsigned>(setup_data.dstBuffers.size() - 1);
-        constexpr size_t signal_offset = 0;
-
-        nixlDeviceKernelParams params = {};
-        params.operation = nixl_device_operation_t::PARTIAL_WRITE;
-        params.level = getLevel();
-        params.numThreads = defaultNumThreads;
-        params.numBlocks = 1;
-        params.numIters = num_iters;
-        params.reqHandle = setup_data.gpuReqHandle;
-
-        applySendMode(params, getSendMode());
-
-        params.partialWrite.count = data_buf_count;
-        params.partialWrite.descIndices = indices_gpu.get();
-        params.partialWrite.sizes = sizes_gpu.get();
-        params.partialWrite.localOffsets = local_offsets_gpu.get();
-        params.partialWrite.remoteOffsets = remote_offsets_gpu.get();
-        params.partialWrite.signalDescIndex = signal_desc_index;
-        params.partialWrite.signalInc = signal_inc;
-        params.partialWrite.signalOffset = signal_offset;
-        params.partialWrite.channelId = defaultChannelId;
-
-        const auto result = launchNixlDeviceKernel(params);
-        ASSERT_EQ(result.status, NIXL_SUCCESS)
-            << "Kernel execution failed with status: " << result.status;
-    }
-};
+    };
 
 } // namespace
 
@@ -89,8 +91,8 @@ TEST_P(partialWriteTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
-    ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters,
-                                            testSignalIncrement));
+    ASSERT_NO_FATAL_FAILURE(
+        runPartialWrite(setup_data, sizes, defaultNumIters, testSignalIncrement));
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
@@ -103,8 +105,7 @@ TEST_P(partialWriteTest, WithoutSignal) {
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
-    ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters,
-                                            signal_inc));
+    ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters, signal_inc));
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
@@ -115,8 +116,8 @@ TEST_P(partialWriteTest, SignalOnly) {
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
-    ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters,
-                                            testSignalIncrement));
+    ASSERT_NO_FATAL_FAILURE(
+        runPartialWrite(setup_data, sizes, defaultNumIters, testSignalIncrement));
 }
 
 } // namespace gtest::nixl::gpu::partial_write

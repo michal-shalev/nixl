@@ -21,19 +21,22 @@ template class deviceApiTestBase<nixl_gpu_level_t>;
 template class deviceApiTestBase<device_test_params_t>;
 
 template<typename paramType>
-nixlAgentConfig deviceApiTestBase<paramType>::getConfig() {
+nixlAgentConfig
+deviceApiTestBase<paramType>::getConfig() {
     return nixlAgentConfig(true, false, 0, nixl_thread_sync_t::NIXL_THREAD_SYNC_RW, 0, 100000);
 }
 
 template<typename paramType>
-nixl_b_params_t deviceApiTestBase<paramType>::getBackendParams() {
+nixl_b_params_t
+deviceApiTestBase<paramType>::getBackendParams() {
     nixl_b_params_t params;
     params["num_workers"] = std::to_string(numUcxWorkers);
     return params;
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::SetUp() {
+void
+deviceApiTestBase<paramType>::SetUp() {
     const cudaError_t cuda_error = cudaSetDevice(0);
     if (cuda_error != cudaSuccess) {
         FAIL() << "Failed to set CUDA device 0: " << cudaGetErrorString(cuda_error);
@@ -51,20 +54,23 @@ void deviceApiTestBase<paramType>::SetUp() {
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::TearDown() {
+void
+deviceApiTestBase<paramType>::TearDown() {
     agents_.clear();
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::registerMem(nixlAgent &agent,
-                                   const std::vector<testArray<uint8_t>> &buffers,
-                                   nixl_mem_t mem_type) {
+void
+deviceApiTestBase<paramType>::registerMem(nixlAgent &agent,
+                                          const std::vector<testArray<uint8_t>> &buffers,
+                                          nixl_mem_t mem_type) {
     auto reg_list = makeDescList<nixlBlobDesc>(buffers, mem_type);
     agent.registerMem(reg_list);
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::exchangeMD(size_t from_agent, size_t to_agent) {
+void
+deviceApiTestBase<paramType>::exchangeMD(size_t from_agent, size_t to_agent) {
     for (size_t i = 0; i < agents_.size(); i++) {
         nixl_blob_t md;
         nixl_status_t status = agents_[i]->getLocalMD(md);
@@ -81,7 +87,8 @@ void deviceApiTestBase<paramType>::exchangeMD(size_t from_agent, size_t to_agent
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::invalidateMD() {
+void
+deviceApiTestBase<paramType>::invalidateMD() {
     for (size_t i = 0; i < agents_.size(); i++) {
         for (size_t j = 0; j < agents_.size(); j++) {
             if (i == j) continue;
@@ -92,8 +99,12 @@ void deviceApiTestBase<paramType>::invalidateMD() {
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::createRegisteredMem(nixlAgent &agent, size_t size, size_t count,
-                                           nixl_mem_t mem_type, std::vector<testArray<uint8_t>> &buffers_out) {
+void
+deviceApiTestBase<paramType>::createRegisteredMem(nixlAgent &agent,
+                                                  size_t size,
+                                                  size_t count,
+                                                  nixl_mem_t mem_type,
+                                                  std::vector<testArray<uint8_t>> &buffers_out) {
     while (count-- != 0) {
         buffers_out.emplace_back(size, mem_type);
     }
@@ -101,22 +112,25 @@ void deviceApiTestBase<paramType>::createRegisteredMem(nixlAgent &agent, size_t 
 }
 
 template<typename paramType>
-nixlAgent &deviceApiTestBase<paramType>::getAgent(size_t idx) {
+nixlAgent &
+deviceApiTestBase<paramType>::getAgent(size_t idx) {
     return *agents_[idx];
 }
 
 template<typename paramType>
-std::string deviceApiTestBase<paramType>::getAgentName(size_t idx) {
+std::string
+deviceApiTestBase<paramType>::getAgentName(size_t idx) {
     return absl::StrFormat("agent_%d", idx);
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
-                                         const std::vector<testArray<uint8_t>> &dst_buffers,
-                                         nixl_mem_t mem_type,
-                                         nixlXferReqH *&xfer_req,
-                                         nixlGpuXferReqH &gpu_req_handle,
-                                         std::string_view custom_param) {
+void
+deviceApiTestBase<paramType>::createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
+                                                const std::vector<testArray<uint8_t>> &dst_buffers,
+                                                nixl_mem_t mem_type,
+                                                nixlXferReqH *&xfer_req,
+                                                nixlGpuXferReqH &gpu_req_handle,
+                                                std::string_view custom_param) {
     nixl_opt_args_t extra_params = {};
     extra_params.hasNotif = true;
     extra_params.notifMsg = std::string(notificationMessage);
@@ -129,22 +143,25 @@ void deviceApiTestBase<paramType>::createXferRequest(const std::vector<testArray
     const nixl_status_t status =
         getAgent(senderAgent)
             .createXferReq(NIXL_WRITE,
-                          makeDescList<nixlBasicDesc>(src_buffers, mem_type),
-                          makeDescList<nixlBasicDesc>(dst_buffers, mem_type),
-                          getAgentName(receiverAgent),
-                          xfer_req,
-                          &extra_params);
+                           makeDescList<nixlBasicDesc>(src_buffers, mem_type),
+                           makeDescList<nixlBasicDesc>(dst_buffers, mem_type),
+                           getAgentName(receiverAgent),
+                           xfer_req,
+                           &extra_params);
 
     ASSERT_EQ(status, NIXL_SUCCESS) << "Failed to create xfer request";
     ASSERT_NE(xfer_req, nullptr);
 
-    const nixl_status_t gpu_status = getAgent(senderAgent).createGpuXferReq(*xfer_req, gpu_req_handle);
+    const nixl_status_t gpu_status =
+        getAgent(senderAgent).createGpuXferReq(*xfer_req, gpu_req_handle);
     ASSERT_EQ(gpu_status, NIXL_SUCCESS) << "Failed to create GPU xfer request";
     ASSERT_NE(gpu_req_handle, nullptr);
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::cleanupXferRequest(nixlXferReqH *xfer_req, nixlGpuXferReqH gpu_req_handle) {
+void
+deviceApiTestBase<paramType>::cleanupXferRequest(nixlXferReqH *xfer_req,
+                                                 nixlGpuXferReqH gpu_req_handle) {
     getAgent(senderAgent).releaseGpuXferReq(gpu_req_handle);
     const nixl_status_t status = getAgent(senderAgent).releaseXferReq(xfer_req);
     ASSERT_EQ(status, NIXL_SUCCESS);
@@ -152,26 +169,34 @@ void deviceApiTestBase<paramType>::cleanupXferRequest(nixlXferReqH *xfer_req, ni
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::launchAndCheckKernel(const nixlDeviceKernelParams &params) {
+void
+deviceApiTestBase<paramType>::launchAndCheckKernel(const nixlDeviceKernelParams &params) {
     const auto result = launchNixlDeviceKernel(params);
     ASSERT_EQ(result.status, NIXL_SUCCESS)
         << "Kernel execution failed with status: " << result.status;
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::setupWriteTest(size_t size, size_t count, nixl_mem_t mem_type,
-                                      testSetupData &setup_data) {
+void
+deviceApiTestBase<paramType>::setupWriteTest(size_t size,
+                                             size_t count,
+                                             nixl_mem_t mem_type,
+                                             testSetupData &setup_data) {
     createRegisteredMem(getAgent(senderAgent), size, count, mem_type, setup_data.srcBuffers);
     createRegisteredMem(getAgent(receiverAgent), size, count, mem_type, setup_data.dstBuffers);
     exchangeMD(senderAgent, receiverAgent);
-    createXferRequest(setup_data.srcBuffers, setup_data.dstBuffers, mem_type,
-                     setup_data.xferReq, setup_data.gpuReqHandle);
+    createXferRequest(setup_data.srcBuffers,
+                      setup_data.dstBuffers,
+                      mem_type,
+                      setup_data.xferReq,
+                      setup_data.gpuReqHandle);
 }
 
 template<typename paramType>
-void deviceApiTestBase<paramType>::setupWithSignal(const std::vector<size_t> &sizes,
-                                       nixl_mem_t mem_type,
-                                       testSetupData &setup_data) {
+void
+deviceApiTestBase<paramType>::setupWithSignal(const std::vector<size_t> &sizes,
+                                              nixl_mem_t mem_type,
+                                              testSetupData &setup_data) {
     for (const auto size : sizes) {
         setup_data.srcBuffers.emplace_back(size, mem_type);
         setup_data.dstBuffers.emplace_back(size, mem_type);
@@ -192,11 +217,15 @@ void deviceApiTestBase<paramType>::setupWithSignal(const std::vector<size_t> &si
     nixlDescList<nixlBlobDesc> signal_desc_list(mem_type);
     const auto &signal_buffer = setup_data.dstBuffers.back();
     signal_desc_list.addDesc(nixlBlobDesc(reinterpret_cast<uintptr_t>(signal_buffer.get()),
-                                          signal_buffer.size(), uint64_t(deviceId_)));
+                                          signal_buffer.size(),
+                                          uint64_t(deviceId_)));
     status = getAgent(receiverAgent).prepGpuSignal(signal_desc_list, &signal_params);
     ASSERT_EQ(status, NIXL_SUCCESS);
 
     exchangeMD(senderAgent, receiverAgent);
-    createXferRequest(setup_data.srcBuffers, setup_data.dstBuffers, mem_type,
-                     setup_data.xferReq, setup_data.gpuReqHandle);
+    createXferRequest(setup_data.srcBuffers,
+                      setup_data.dstBuffers,
+                      mem_type,
+                      setup_data.xferReq,
+                      setup_data.gpuReqHandle);
 }

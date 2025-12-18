@@ -22,56 +22,60 @@ namespace gtest::nixl::gpu::signal_local {
 
 namespace {
 
-class signalLocalTest : public deviceApiTestBase<nixl_gpu_level_t> {
-protected:
-    std::vector<testArray<uint8_t>> signalBuffers_;
+    class signalLocalTest : public deviceApiTestBase<nixl_gpu_level_t> {
+    protected:
+        std::vector<testArray<uint8_t>> signalBuffers_;
 
-    void setupLocalSignal(size_t &signal_size) {
-        nixl_opt_args_t extra_params = {.backends = {backendHandles_[senderAgent]}};
-        nixl_status_t status =
-            getAgent(senderAgent).getGpuSignalSize(signal_size, &extra_params);
-        ASSERT_EQ(status, NIXL_SUCCESS);
+        void
+        setupLocalSignal(size_t &signal_size) {
+            nixl_opt_args_t extra_params = {.backends = {backendHandles_[senderAgent]}};
+            nixl_status_t status =
+                getAgent(senderAgent).getGpuSignalSize(signal_size, &extra_params);
+            ASSERT_EQ(status, NIXL_SUCCESS);
 
-        signalBuffers_.clear();
-        signalBuffers_.emplace_back(signal_size, VRAM_SEG);
+            signalBuffers_.clear();
+            signalBuffers_.emplace_back(signal_size, VRAM_SEG);
 
-        cudaMemset(signalBuffers_[0].get(), 0, signal_size);
-    }
+            cudaMemset(signalBuffers_[0].get(), 0, signal_size);
+        }
 
-    void* getSignalBuffer() {
-        return signalBuffers_.empty() ? nullptr : signalBuffers_[0].get();
-    }
+        void *
+        getSignalBuffer() {
+            return signalBuffers_.empty() ? nullptr : signalBuffers_[0].get();
+        }
 
-    void writeSignal(void *signal_addr, uint64_t value, size_t num_threads) {
-        nixlDeviceKernelParams params = {};
-        params.operation = nixl_device_operation_t::SIGNAL_WRITE;
-        params.level = GetParam();
-        params.numThreads = num_threads;
-        params.numBlocks = 1;
-        params.numIters = 1;
+        void
+        writeSignal(void *signal_addr, uint64_t value, size_t num_threads) {
+            nixlDeviceKernelParams params = {};
+            params.operation = nixl_device_operation_t::SIGNAL_WRITE;
+            params.level = GetParam();
+            params.numThreads = num_threads;
+            params.numBlocks = 1;
+            params.numIters = 1;
 
-        params.signalWrite.signalAddr = signal_addr;
-        params.signalWrite.value = value;
+            params.signalWrite.signalAddr = signal_addr;
+            params.signalWrite.value = value;
 
-        const auto result = launchNixlDeviceKernel(params);
-        ASSERT_EQ(result.status, NIXL_SUCCESS);
-    }
+            const auto result = launchNixlDeviceKernel(params);
+            ASSERT_EQ(result.status, NIXL_SUCCESS);
+        }
 
-    void readAndVerifySignal(const void *signal_addr, uint64_t expected_value, size_t num_threads) {
-        nixlDeviceKernelParams params = {};
-        params.operation = nixl_device_operation_t::SIGNAL_WAIT;
-        params.level = GetParam();
-        params.numThreads = num_threads;
-        params.numBlocks = 1;
-        params.numIters = 1;
+        void
+        readAndVerifySignal(const void *signal_addr, uint64_t expected_value, size_t num_threads) {
+            nixlDeviceKernelParams params = {};
+            params.operation = nixl_device_operation_t::SIGNAL_WAIT;
+            params.level = GetParam();
+            params.numThreads = num_threads;
+            params.numBlocks = 1;
+            params.numIters = 1;
 
-        params.signalWait.signalAddr = signal_addr;
-        params.signalWait.expectedValue = expected_value;
+            params.signalWait.signalAddr = signal_addr;
+            params.signalWait.expectedValue = expected_value;
 
-        const auto result = launchNixlDeviceKernel(params);
-        ASSERT_EQ(result.status, NIXL_SUCCESS);
-    }
-};
+            const auto result = launchNixlDeviceKernel(params);
+            ASSERT_EQ(result.status, NIXL_SUCCESS);
+        }
+    };
 
 } // namespace
 
@@ -131,6 +135,7 @@ TEST_P(signalLocalTest, MaxValue) {
 
 using gtest::nixl::gpu::signal_local::signalLocalTest;
 
-INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, signalLocalTest,
+INSTANTIATE_TEST_SUITE_P(ucxDeviceApi,
+                         signalLocalTest,
                          testing::ValuesIn(signalLocalTest::getTestLevels()),
                          testNameGenerator::level);

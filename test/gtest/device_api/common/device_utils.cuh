@@ -40,7 +40,8 @@ enum class send_mode_t {
     WITHOUT_NODELAY_WITHOUT_REQ,
 };
 
-inline std::string_view getSendModeStr(send_mode_t mode) {
+inline std::string_view
+getSendModeStr(send_mode_t mode) {
     switch (mode) {
     case send_mode_t::NODELAY_WITH_REQ:
         return "nodelay_with_req";
@@ -53,7 +54,8 @@ inline std::string_view getSendModeStr(send_mode_t mode) {
     }
 }
 
-inline void applySendMode(nixlDeviceKernelParams &params, send_mode_t mode) {
+inline void
+applySendMode(nixlDeviceKernelParams &params, send_mode_t mode) {
     switch (mode) {
     case send_mode_t::NODELAY_WITH_REQ:
         params.withNoDelay = true;
@@ -72,7 +74,8 @@ inline void applySendMode(nixlDeviceKernelParams &params, send_mode_t mode) {
 
 using device_test_params_t = std::tuple<nixl_gpu_level_t, send_mode_t>;
 
-inline std::string_view getGpuLevelStr(nixl_gpu_level_t level) {
+inline std::string_view
+getGpuLevelStr(nixl_gpu_level_t level) {
     switch (level) {
     case nixl_gpu_level_t::WARP:
         return "WARP";
@@ -86,18 +89,22 @@ inline std::string_view getGpuLevelStr(nixl_gpu_level_t level) {
 }
 
 struct testNameGenerator {
-    static std::string device(const testing::TestParamInfo<device_test_params_t> &info) {
+    static std::string
+    device(const testing::TestParamInfo<device_test_params_t> &info) {
         const auto level = std::get<0>(info.param);
         const auto mode = std::get<1>(info.param);
-        return std::string("UCX_") + std::string(getGpuLevelStr(level)) + "_" + std::string(getSendModeStr(mode));
+        return std::string("UCX_") + std::string(getGpuLevelStr(level)) + "_" +
+            std::string(getSendModeStr(mode));
     }
 
-    static std::string level(const testing::TestParamInfo<nixl_gpu_level_t> &info) {
+    static std::string
+    level(const testing::TestParamInfo<nixl_gpu_level_t> &info) {
         return std::string("UCX_") + std::string(getGpuLevelStr(info.param));
     }
 };
 
-[[nodiscard]] inline nixl_status_t checkCudaErrors() {
+[[nodiscard]] inline nixl_status_t
+checkCudaErrors() {
     const cudaError_t launch_error = cudaGetLastError();
     if (launch_error != cudaSuccess) {
         std::cerr << "CUDA kernel launch error: " << cudaGetErrorString(launch_error) << "\n";

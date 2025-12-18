@@ -21,31 +21,30 @@ namespace gtest::nixl::gpu::write {
 
 namespace {
 
-class writeTest : public deviceApiTestBase<device_test_params_t> {
-protected:
-    void runWrite(const testSetupData &setup_data,
-                  size_t num_iters,
-                  uint64_t signal_inc) {
-        constexpr unsigned channel_id = defaultChannelId;
+    class writeTest : public deviceApiTestBase<device_test_params_t> {
+    protected:
+        void
+        runWrite(const testSetupData &setup_data, size_t num_iters, uint64_t signal_inc) {
+            constexpr unsigned channel_id = defaultChannelId;
 
-        nixlDeviceKernelParams params = {};
-        params.operation = nixl_device_operation_t::WRITE;
-        params.level = getLevel();
-        params.numThreads = defaultNumThreads;
-        params.numBlocks = 1;
-        params.numIters = num_iters;
-        params.reqHandle = setup_data.gpuReqHandle;
+            nixlDeviceKernelParams params = {};
+            params.operation = nixl_device_operation_t::WRITE;
+            params.level = getLevel();
+            params.numThreads = defaultNumThreads;
+            params.numBlocks = 1;
+            params.numIters = num_iters;
+            params.reqHandle = setup_data.gpuReqHandle;
 
-        applySendMode(params, getSendMode());
+            applySendMode(params, getSendMode());
 
-        params.write.signalInc = signal_inc;
-        params.write.channelId = channel_id;
+            params.write.signalInc = signal_inc;
+            params.write.channelId = channel_id;
 
-        const auto result = launchNixlDeviceKernel(params);
-        ASSERT_EQ(result.status, NIXL_SUCCESS)
-            << "Kernel execution failed with status: " << result.status;
-    }
-};
+            const auto result = launchNixlDeviceKernel(params);
+            ASSERT_EQ(result.status, NIXL_SUCCESS)
+                << "Kernel execution failed with status: " << result.status;
+        }
+    };
 
 } // namespace
 
@@ -57,8 +56,7 @@ TEST_P(writeTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
-    ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, defaultNumIters,
-                                     testSignalIncrement));
+    ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, defaultNumIters, testSignalIncrement));
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
@@ -82,8 +80,7 @@ TEST_P(writeTest, SignalOnly) {
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
-    ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, 1000,
-                                     testSignalIncrement));
+    ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, 1000, testSignalIncrement));
 }
 
 } // namespace gtest::nixl::gpu::write

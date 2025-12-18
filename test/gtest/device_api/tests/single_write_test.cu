@@ -21,23 +21,24 @@ namespace gtest::nixl::gpu::single_write {
 
 namespace {
 
-class singleWriteTest : public deviceApiTestBase<device_test_params_t> {
-protected:
-    void runTest(testSetupData &setup_data, size_t size, size_t num_iters) {
-        nixlDeviceKernelParams params = {};
-        params.operation = nixl_device_operation_t::SINGLE_WRITE;
-        params.level = getLevel();
-        params.numThreads = defaultNumThreads;
-        params.numBlocks = 1;
-        params.numIters = num_iters;
-        params.reqHandle = setup_data.gpuReqHandle;
-        params.singleWrite = {0, 0, 0, size, defaultChannelId};
+    class singleWriteTest : public deviceApiTestBase<device_test_params_t> {
+    protected:
+        void
+        runTest(testSetupData &setup_data, size_t size, size_t num_iters) {
+            nixlDeviceKernelParams params = {};
+            params.operation = nixl_device_operation_t::SINGLE_WRITE;
+            params.level = getLevel();
+            params.numThreads = defaultNumThreads;
+            params.numBlocks = 1;
+            params.numIters = num_iters;
+            params.reqHandle = setup_data.gpuReqHandle;
+            params.singleWrite = {0, 0, 0, size, defaultChannelId};
 
-        applySendMode(params, getSendMode());
+            applySendMode(params, getSendMode());
 
-        launchAndCheckKernel(params);
-    }
-};
+            launchAndCheckKernel(params);
+        }
+    };
 
 } // namespace
 
@@ -57,8 +58,10 @@ TEST_P(singleWriteTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(runTest(setup_data, size, defaultNumIters));
 
     uint32_t dst;
-    cudaMemcpy(&dst, reinterpret_cast<uint32_t *>(setup_data.dstBuffers[0].get()),
-               sizeof(uint32_t), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&dst,
+               reinterpret_cast<uint32_t *>(setup_data.dstBuffers[0].get()),
+               sizeof(uint32_t),
+               cudaMemcpyDeviceToHost);
     ASSERT_EQ(dst, pattern);
 }
 
@@ -80,8 +83,10 @@ TEST_P(singleWriteTest, MultipleWorkers) {
         for (size_t i = 0; i < num_elements; i++) {
             patterns[worker_id][i] = 0xDEAD0000 | static_cast<uint32_t>(worker_id);
         }
-        cudaMemcpy(src_buffers[worker_id][0].get(), patterns[worker_id].data(),
-                   size, cudaMemcpyHostToDevice);
+        cudaMemcpy(src_buffers[worker_id][0].get(),
+                   patterns[worker_id].data(),
+                   size,
+                   cudaMemcpyHostToDevice);
     }
 
     exchangeMD(senderAgent, receiverAgent);
@@ -91,8 +96,12 @@ TEST_P(singleWriteTest, MultipleWorkers) {
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {
         const std::string custom_param = "worker_id=" + std::to_string(worker_id);
-        createXferRequest(src_buffers[worker_id], dst_buffers[worker_id], VRAM_SEG,
-                         xfer_reqs[worker_id], gpu_req_handles[worker_id], custom_param);
+        createXferRequest(src_buffers[worker_id],
+                          dst_buffers[worker_id],
+                          VRAM_SEG,
+                          xfer_reqs[worker_id],
+                          gpu_req_handles[worker_id],
+                          custom_param);
     }
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {
@@ -108,14 +117,12 @@ TEST_P(singleWriteTest, MultipleWorkers) {
         applySendMode(params, getSendMode());
 
         const auto result = launchNixlDeviceKernel(params);
-        ASSERT_EQ(result.status, NIXL_SUCCESS)
-            << "Kernel launch failed for worker " << worker_id;
+        ASSERT_EQ(result.status, NIXL_SUCCESS) << "Kernel launch failed for worker " << worker_id;
     }
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {
         std::vector<uint32_t> received(size / sizeof(uint32_t));
-        cudaMemcpy(received.data(), dst_buffers[worker_id][0].get(),
-                   size, cudaMemcpyDeviceToHost);
+        cudaMemcpy(received.data(), dst_buffers[worker_id][0].get(), size, cudaMemcpyDeviceToHost);
 
         ASSERT_EQ(received, patterns[worker_id])
             << "Worker " << worker_id << " data verification failed";
@@ -134,6 +141,7 @@ TEST_P(singleWriteTest, MultipleWorkers) {
 
 using gtest::nixl::gpu::single_write::singleWriteTest;
 
-INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, singleWriteTest,
+INSTANTIATE_TEST_SUITE_P(ucxDeviceApi,
+                         singleWriteTest,
                          testing::ValuesIn(singleWriteTest::getDeviceTestParams()),
                          testNameGenerator::device);

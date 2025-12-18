@@ -49,7 +49,8 @@ public:
     static constexpr uint32_t testPattern1 = 0xDEADBEEF;
     static constexpr uint32_t testPattern2 = 0xCAFEBABE;
 
-    [[nodiscard]] static const std::vector<nixl_gpu_level_t> &getTestLevels() {
+    [[nodiscard]] static const std::vector<nixl_gpu_level_t> &
+    getTestLevels() {
         static const std::vector<nixl_gpu_level_t> testLevels = {
             nixl_gpu_level_t::BLOCK,
             nixl_gpu_level_t::WARP,
@@ -58,7 +59,8 @@ public:
         return testLevels;
     }
 
-    [[nodiscard]] static const std::vector<nixl_gpu_level_t> &getPartialWriteTestLevels() {
+    [[nodiscard]] static const std::vector<nixl_gpu_level_t> &
+    getPartialWriteTestLevels() {
         static const std::vector<nixl_gpu_level_t> partialWriteLevels = {
             nixl_gpu_level_t::WARP,
             nixl_gpu_level_t::THREAD,
@@ -66,7 +68,8 @@ public:
         return partialWriteLevels;
     }
 
-    [[nodiscard]] static std::vector<device_test_params_t> getDeviceTestParams() {
+    [[nodiscard]] static std::vector<device_test_params_t>
+    getDeviceTestParams() {
         std::vector<device_test_params_t> params;
         const auto &levels = getTestLevels();
         const std::vector<send_mode_t> modes = {
@@ -83,7 +86,8 @@ public:
         return params;
     }
 
-    [[nodiscard]] static std::vector<device_test_params_t> getPartialWriteDeviceTestParams() {
+    [[nodiscard]] static std::vector<device_test_params_t>
+    getPartialWriteDeviceTestParams() {
         std::vector<device_test_params_t> params;
         const auto &levels = getPartialWriteTestLevels();
         const std::vector<send_mode_t> modes = {
@@ -100,7 +104,8 @@ public:
         return params;
     }
 
-    nixl_gpu_level_t getLevel() const {
+    nixl_gpu_level_t
+    getLevel() const {
         if constexpr (std::is_same_v<paramType, nixl_gpu_level_t>) {
             return this->GetParam();
         } else {
@@ -132,8 +137,8 @@ protected:
             deviceApiTestBase *testBase_;
 
             cleanupGuard(nixlXferReqH **xfer_req_ptr,
-                        nixlGpuXferReqH *gpu_req_handle_ptr,
-                        deviceApiTestBase *test_base)
+                         nixlGpuXferReqH *gpu_req_handle_ptr,
+                         deviceApiTestBase *test_base)
                 : xferReqPtr_(xfer_req_ptr),
                   gpuReqHandlePtr_(gpu_req_handle_ptr),
                   testBase_(test_base) {}
@@ -144,17 +149,22 @@ protected:
                 }
             }
 
-            cleanupGuard(const cleanupGuard&) = delete;
-            cleanupGuard& operator=(const cleanupGuard&) = delete;
+            cleanupGuard(const cleanupGuard &) = delete;
+            cleanupGuard &
+            operator=(const cleanupGuard &) = delete;
         };
 
-        cleanupGuard makeCleanupGuard(deviceApiTestBase *test_base) {
+        cleanupGuard
+        makeCleanupGuard(deviceApiTestBase *test_base) {
             return cleanupGuard(&xferReq, &gpuReqHandle, test_base);
         }
     };
 
-    static nixlAgentConfig getConfig();
-    static void generateTestPattern(std::vector<uint8_t> &pattern, size_t size, size_t offset = 0) {
+    static nixlAgentConfig
+    getConfig();
+
+    static void
+    generateTestPattern(std::vector<uint8_t> &pattern, size_t size, size_t offset = 0) {
         constexpr size_t patternModulo = 256;
         pattern.resize(size);
         for (size_t i = 0; i < size; ++i) {
@@ -162,61 +172,84 @@ protected:
         }
     }
 
-    static void copyToDevice(void *dst, const void *src, size_t size) {
+    static void
+    copyToDevice(void *dst, const void *src, size_t size) {
         const cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice);
         if (err != cudaSuccess) {
             throw std::runtime_error(std::string("cudaMemcpy to device failed: ") +
-                                   cudaGetErrorString(err));
+                                     cudaGetErrorString(err));
         }
     }
 
-    static void copyFromDevice(void *dst, const void *src, size_t size) {
+    static void
+    copyFromDevice(void *dst, const void *src, size_t size) {
         const cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
         if (err != cudaSuccess) {
             throw std::runtime_error(std::string("cudaMemcpy from device failed: ") +
-                                   cudaGetErrorString(err));
+                                     cudaGetErrorString(err));
         }
     }
 
-    nixl_b_params_t getBackendParams();
-    void SetUp() override;
-    void TearDown() override;
+    nixl_b_params_t
+    getBackendParams();
+    void
+    SetUp() override;
+    void
+    TearDown() override;
 
     template<typename descType>
     [[nodiscard]] nixlDescList<descType>
     makeDescList(const std::vector<testArray<uint8_t>> &buffers, nixl_mem_t mem_type) {
         nixlDescList<descType> desc_list(mem_type);
         for (const auto &buffer : buffers) {
-            desc_list.addDesc(descType(reinterpret_cast<uintptr_t>(buffer.get()), buffer.size(), uint64_t(deviceId_)));
+            desc_list.addDesc(descType(
+                reinterpret_cast<uintptr_t>(buffer.get()), buffer.size(), uint64_t(deviceId_)));
         }
         return desc_list;
     }
 
-    void registerMem(nixlAgent &agent, const std::vector<testArray<uint8_t>> &buffers, nixl_mem_t mem_type);
-    void exchangeMD(size_t from_agent, size_t to_agent);
-    void invalidateMD();
+    void
+    registerMem(nixlAgent &agent,
+                const std::vector<testArray<uint8_t>> &buffers,
+                nixl_mem_t mem_type);
+    void
+    exchangeMD(size_t from_agent, size_t to_agent);
+    void
+    invalidateMD();
 
-    void createRegisteredMem(nixlAgent &agent, size_t size, size_t count,
-                            nixl_mem_t mem_type, std::vector<testArray<uint8_t>> &buffers_out);
-
-    [[nodiscard]] nixlAgent &getAgent(size_t idx);
-    [[nodiscard]] std::string getAgentName(size_t idx);
-
-    void createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
-                          const std::vector<testArray<uint8_t>> &dst_buffers,
-                          nixl_mem_t mem_type,
-                          nixlXferReqH *&xfer_req,
-                          nixlGpuXferReqH &gpu_req_handle,
-                          std::string_view custom_param = "");
-
-    void cleanupXferRequest(nixlXferReqH *xfer_req, nixlGpuXferReqH gpu_req_handle);
-    void launchAndCheckKernel(const nixlDeviceKernelParams &params);
-    void setupWriteTest(size_t size, size_t count, nixl_mem_t mem_type, testSetupData &setup_data);
-    void setupWithSignal(const std::vector<size_t> &sizes,
+    void
+    createRegisteredMem(nixlAgent &agent,
+                        size_t size,
+                        size_t count,
                         nixl_mem_t mem_type,
-                        testSetupData &setup_data);
+                        std::vector<testArray<uint8_t>> &buffers_out);
 
-    void initializeTestData(const std::vector<size_t> &sizes, testSetupData &setup_data) {
+    [[nodiscard]] nixlAgent &
+    getAgent(size_t idx);
+    [[nodiscard]] std::string
+    getAgentName(size_t idx);
+
+    void
+    createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
+                      const std::vector<testArray<uint8_t>> &dst_buffers,
+                      nixl_mem_t mem_type,
+                      nixlXferReqH *&xfer_req,
+                      nixlGpuXferReqH &gpu_req_handle,
+                      std::string_view custom_param = "");
+
+    void
+    cleanupXferRequest(nixlXferReqH *xfer_req, nixlGpuXferReqH gpu_req_handle);
+    void
+    launchAndCheckKernel(const nixlDeviceKernelParams &params);
+    void
+    setupWriteTest(size_t size, size_t count, nixl_mem_t mem_type, testSetupData &setup_data);
+    void
+    setupWithSignal(const std::vector<size_t> &sizes,
+                    nixl_mem_t mem_type,
+                    testSetupData &setup_data);
+
+    void
+    initializeTestData(const std::vector<size_t> &sizes, testSetupData &setup_data) {
         for (size_t i = 0; i < sizes.size(); ++i) {
             std::vector<uint8_t> pattern;
             generateTestPattern(pattern, sizes[i], i);
@@ -224,7 +257,8 @@ protected:
         }
     }
 
-    void verifyTestData(const std::vector<size_t> &sizes, const testSetupData &setup_data) {
+    void
+    verifyTestData(const std::vector<size_t> &sizes, const testSetupData &setup_data) {
         for (size_t i = 0; i < sizes.size(); ++i) {
             std::vector<uint8_t> expected_pattern;
             std::vector<uint8_t> received_data(sizes[i]);

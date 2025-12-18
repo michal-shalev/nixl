@@ -31,14 +31,18 @@
 template<typename elementType> class testArray {
 public:
     explicit testArray(size_t count, nixl_mem_t mem_type = VRAM_SEG)
-        : count_{count}, mem_type_{mem_type}, ptr_{malloc(count, mem_type), deleter{mem_type}} {}
+        : count_{count},
+          mem_type_{mem_type},
+          ptr_{malloc(count, mem_type), deleter{mem_type}} {}
 
     testArray(const testArray &) = delete;
     testArray &
     operator=(const testArray &) = delete;
 
     testArray(testArray &&other) noexcept
-        : count_{other.count_}, mem_type_{other.mem_type_}, ptr_{std::move(other.ptr_)} {}
+        : count_{other.count_},
+          mem_type_{other.mem_type_},
+          ptr_{std::move(other.ptr_)} {}
 
     testArray &
     operator=(testArray &&other) noexcept {
@@ -126,7 +130,8 @@ private:
     struct deleter {
         nixl_mem_t mem_type;
 
-        void operator()(elementType *ptr) const {
+        void
+        operator()(elementType *ptr) const {
             if (ptr == nullptr) {
                 return;
             }
@@ -151,4 +156,3 @@ private:
 };
 
 #endif // NIXL_DEVICE_API_TEST_ARRAY_H
-
