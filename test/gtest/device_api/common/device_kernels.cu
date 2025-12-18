@@ -114,8 +114,7 @@ doOperation(const nixlDeviceKernelParams &params, nixlGpuXferStatusH *req_ptr) {
 
     case nixl_device_operation_t::SIGNAL_WAIT: {
         if (params.signalWait.signalAddr == nullptr) {
-            status = NIXL_ERR_INVALID_PARAM;
-            break;
+            return NIXL_ERR_INVALID_PARAM;
         }
 
         uint64_t value;
@@ -123,22 +122,18 @@ doOperation(const nixlDeviceKernelParams &params, nixlGpuXferStatusH *req_ptr) {
             value = nixlGpuReadSignal<level>(params.signalWait.signalAddr);
         } while (value != params.signalWait.expectedValue);
 
-        status = NIXL_SUCCESS;
-        break;
+        return NIXL_SUCCESS;
     }
 
     case nixl_device_operation_t::SIGNAL_WRITE:
         if (params.signalWrite.signalAddr == nullptr) {
-            status = NIXL_ERR_INVALID_PARAM;
-            break;
+            return NIXL_ERR_INVALID_PARAM;
         }
         nixlGpuWriteSignal<level>(params.signalWrite.signalAddr, params.signalWrite.value);
-        status = NIXL_SUCCESS;
-        break;
+        return NIXL_SUCCESS;
 
     default:
-        status = NIXL_ERR_INVALID_PARAM;
-        break;
+        return NIXL_ERR_INVALID_PARAM;
     }
 
     if (status != NIXL_IN_PROG) {
