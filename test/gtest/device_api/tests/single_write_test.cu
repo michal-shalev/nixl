@@ -25,7 +25,7 @@ namespace {
     protected:
         void
         runTest(testSetupData &setup_data, size_t size, size_t num_iters) {
-            nixlDeviceKernelParams params = {};
+            nixlDeviceKernelParams params;
             params.operation = nixl_device_operation_t::SINGLE_WRITE;
             params.level = getLevel();
             params.numThreads = defaultNumThreads;
@@ -105,7 +105,7 @@ TEST_P(singleWriteTest, MultipleWorkers) {
     }
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {
-        nixlDeviceKernelParams params = {};
+        nixlDeviceKernelParams params;
         params.operation = nixl_device_operation_t::SINGLE_WRITE;
         params.level = getLevel();
         params.numThreads = defaultNumThreads;

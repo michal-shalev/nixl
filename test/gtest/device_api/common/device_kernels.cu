@@ -47,16 +47,18 @@ getStatusIndex() {
     }
 }
 
-template<nixl_gpu_level_t level>
 size_t
-sharedRequestCount(size_t num_threads) {
-    if constexpr (level == nixl_gpu_level_t::THREAD) {
+sharedRequestCount(nixl_gpu_level_t level, size_t num_threads) {
+    switch (level) {
+    case nixl_gpu_level_t::THREAD:
         return num_threads;
-    } else if constexpr (level == nixl_gpu_level_t::WARP) {
+    case nixl_gpu_level_t::WARP:
         // Use 32 for calculation since warpSize is not available on host
         return (num_threads + 31) / 32;
-    } else {
+    case nixl_gpu_level_t::BLOCK:
         return 1;
+    default:
+        return 0;
     }
 }
 
@@ -209,23 +211,19 @@ launchNixlDeviceKernel(const nixlDeviceKernelParams &params) {
     nixl_status_t init_status = NIXL_ERR_INVALID_PARAM;
     result.copyFromHost(&init_status, 1);
 
-    size_t shared_mem_size = 0;
+    const size_t shared_mem_size =
+        sharedRequestCount(params.level, params.numThreads) * sizeof(nixlGpuXferStatusH);
+
     switch (params.level) {
     case nixl_gpu_level_t::THREAD:
-        shared_mem_size = sharedRequestCount<nixl_gpu_level_t::THREAD>(params.numThreads) *
-            sizeof(nixlGpuXferStatusH);
         nixlTestKernel<nixl_gpu_level_t::THREAD>
             <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;
     case nixl_gpu_level_t::WARP:
-        shared_mem_size = sharedRequestCount<nixl_gpu_level_t::WARP>(params.numThreads) *
-            sizeof(nixlGpuXferStatusH);
         nixlTestKernel<nixl_gpu_level_t::WARP>
             <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;
     case nixl_gpu_level_t::BLOCK:
-        shared_mem_size = sharedRequestCount<nixl_gpu_level_t::BLOCK>(params.numThreads) *
-            sizeof(nixlGpuXferStatusH);
         nixlTestKernel<nixl_gpu_level_t::BLOCK>
             <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;

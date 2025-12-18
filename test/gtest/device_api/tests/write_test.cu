@@ -27,7 +27,7 @@ namespace {
         runWrite(const testSetupData &setup_data, size_t num_iters, uint64_t signal_inc) {
             constexpr unsigned channel_id = defaultChannelId;
 
-            nixlDeviceKernelParams params = {};
+            nixlDeviceKernelParams params;
             params.operation = nixl_device_operation_t::WRITE;
             params.level = getLevel();
             params.numThreads = defaultNumThreads;

@@ -46,7 +46,7 @@ namespace {
 
         void
         writeSignal(void *signal_addr, uint64_t value, size_t num_threads) {
-            nixlDeviceKernelParams params = {};
+            nixlDeviceKernelParams params;
             params.operation = nixl_device_operation_t::SIGNAL_WRITE;
             params.level = GetParam();
             params.numThreads = num_threads;
@@ -62,7 +62,7 @@ namespace {
 
         void
         readAndVerifySignal(const void *signal_addr, uint64_t expected_value, size_t num_threads) {
-            nixlDeviceKernelParams params = {};
+            nixlDeviceKernelParams params;
             params.operation = nixl_device_operation_t::SIGNAL_WAIT;
             params.level = GetParam();
             params.numThreads = num_threads;
@@ -95,7 +95,7 @@ TEST_P(signalLocalTest, MultipleWrites) {
 
     const std::vector<uint64_t> test_values = {testPattern1, testPattern2, testSignalIncrement};
 
-    for (const auto value : test_values) {
+    for (const auto &value : test_values) {
         ASSERT_NO_FATAL_FAILURE(writeSignal(getSignalBuffer(), value, defaultNumThreads));
         ASSERT_NO_FATAL_FAILURE(readAndVerifySignal(getSignalBuffer(), value, defaultNumThreads));
     }

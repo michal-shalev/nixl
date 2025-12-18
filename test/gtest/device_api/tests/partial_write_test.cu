@@ -55,7 +55,7 @@ namespace {
                 static_cast<unsigned>(setup_data.dstBuffers.size() - 1);
             constexpr size_t signal_offset = 0;
 
-            nixlDeviceKernelParams params = {};
+            nixlDeviceKernelParams params;
             params.operation = nixl_device_operation_t::PARTIAL_WRITE;
             params.level = getLevel();
             params.numThreads = defaultNumThreads;
