@@ -271,11 +271,15 @@ protected:
         }
     }
 
-    std::vector<nixlBackendH *> backendHandles_;
+    [[nodiscard]] nixlBackendH *
+    getBackendHandle(size_t idx) const {
+        return backendHandles_.at(idx);
+    }
 
 private:
     static constexpr uint64_t deviceId_ = 0;
     std::vector<std::unique_ptr<nixlAgent>> agents_;
+    std::vector<nixlBackendH *> backendHandles_;
 };
 
 #endif // NIXL_DEVICE_TEST_BASE_CUH

@@ -134,7 +134,7 @@ deviceApiTestBase<paramType>::createXferRequest(const std::vector<testArray<uint
     nixl_opt_args_t extra_params = {};
     extra_params.hasNotif = true;
     extra_params.notifMsg = std::string(notificationMessage);
-    extra_params.backends = {backendHandles_[senderAgent]};
+    extra_params.backends = {getBackendHandle(senderAgent)};
     if (!custom_param.empty()) {
         extra_params.customParam = std::string(custom_param);
     }
@@ -201,7 +201,7 @@ deviceApiTestBase<paramType>::setupWithSignal(const std::vector<size_t> &sizes,
         setup_data.dstBuffers.emplace_back(size, mem_type);
     }
 
-    nixl_opt_args_t signal_params = {.backends = {backendHandles_[receiverAgent]}};
+    nixl_opt_args_t signal_params = {.backends = {getBackendHandle(receiverAgent)}};
     size_t signal_size;
     nixl_status_t status = getAgent(receiverAgent).getGpuSignalSize(signal_size, &signal_params);
     ASSERT_EQ(status, NIXL_SUCCESS);

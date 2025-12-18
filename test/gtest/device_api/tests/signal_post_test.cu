@@ -27,7 +27,7 @@ namespace {
     protected:
         void
         setupSignalPost(testSetupData &data) {
-            nixl_opt_args_t extra_params = {.backends = {backendHandles_[receiverAgent]}};
+            nixl_opt_args_t extra_params = {.backends = {getBackendHandle(receiverAgent)}};
             size_t signal_size;
             nixl_status_t status =
                 getAgent(receiverAgent).getGpuSignalSize(signal_size, &extra_params);

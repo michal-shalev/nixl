@@ -24,11 +24,10 @@ namespace {
 
     class signalLocalTest : public deviceApiTestBase<nixl_gpu_level_t> {
     protected:
-        std::vector<testArray<uint8_t>> signalBuffers_;
-
         void
-        setupLocalSignal(size_t &signal_size) {
-            nixl_opt_args_t extra_params = {.backends = {backendHandles_[senderAgent]}};
+        setupLocalSignal() {
+            nixl_opt_args_t extra_params = {.backends = {getBackendHandle(senderAgent)}};
+            size_t signal_size = 0;
             nixl_status_t status =
                 getAgent(senderAgent).getGpuSignalSize(signal_size, &extra_params);
             ASSERT_EQ(status, NIXL_SUCCESS);
@@ -75,13 +74,15 @@ namespace {
             const nixl_status_t status = launchNixlDeviceKernel(params);
             ASSERT_EQ(status, NIXL_SUCCESS);
         }
+
+    private:
+        std::vector<testArray<uint8_t>> signalBuffers_;
     };
 
 } // namespace
 
 TEST_P(signalLocalTest, WriteRead) {
-    size_t signal_size;
-    ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
+    ASSERT_NO_FATAL_FAILURE(setupLocalSignal());
 
     constexpr uint64_t test_value = testPattern1;
 
@@ -90,8 +91,7 @@ TEST_P(signalLocalTest, WriteRead) {
 }
 
 TEST_P(signalLocalTest, MultipleWrites) {
-    size_t signal_size;
-    ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
+    ASSERT_NO_FATAL_FAILURE(setupLocalSignal());
 
     const std::vector<uint64_t> test_values = {testPattern1, testPattern2, testSignalIncrement};
 
@@ -102,8 +102,7 @@ TEST_P(signalLocalTest, MultipleWrites) {
 }
 
 TEST_P(signalLocalTest, SingleThread) {
-    size_t signal_size;
-    ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
+    ASSERT_NO_FATAL_FAILURE(setupLocalSignal());
 
     constexpr uint64_t test_value = testPattern1;
 
@@ -112,8 +111,7 @@ TEST_P(signalLocalTest, SingleThread) {
 }
 
 TEST_P(signalLocalTest, ZeroValue) {
-    size_t signal_size;
-    ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
+    ASSERT_NO_FATAL_FAILURE(setupLocalSignal());
 
     constexpr uint64_t zero_value = 0;
 
@@ -122,8 +120,7 @@ TEST_P(signalLocalTest, ZeroValue) {
 }
 
 TEST_P(signalLocalTest, MaxValue) {
-    size_t signal_size;
-    ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
+    ASSERT_NO_FATAL_FAILURE(setupLocalSignal());
 
     constexpr uint64_t max_value = UINT64_MAX;
 
