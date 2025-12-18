@@ -21,15 +21,15 @@ namespace gtest::nixl::gpu::write {
 
 namespace {
 
-class WriteTest : public DeviceApiTestBase<DeviceTestParams> {
+class writeTest : public deviceApiTestBase<device_test_params_t> {
 protected:
-    void runWrite(const TestSetupData &setup_data,
+    void runWrite(const testSetupData &setup_data,
                   size_t num_iters,
                   uint64_t signal_inc) {
         constexpr unsigned channel_id = defaultChannelId;
 
-        NixlDeviceKernelParams params = {};
-        params.operation = NixlDeviceOperation::WRITE;
+        nixlDeviceKernelParams params = {};
+        params.operation = nixl_device_operation_t::WRITE;
         params.level = getLevel();
         params.numThreads = defaultNumThreads;
         params.numBlocks = 1;
@@ -49,10 +49,10 @@ protected:
 
 } // namespace
 
-TEST_P(WriteTest, Basic) {
+TEST_P(writeTest, Basic) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
 
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
@@ -62,11 +62,11 @@ TEST_P(WriteTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
-TEST_P(WriteTest, WithoutSignal) {
+TEST_P(writeTest, WithoutSignal) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
     constexpr uint64_t signal_inc = 0;
 
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
@@ -75,10 +75,10 @@ TEST_P(WriteTest, WithoutSignal) {
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
-TEST_P(WriteTest, SignalOnly) {
+TEST_P(writeTest, SignalOnly) {
     const std::vector<size_t> sizes;
 
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
@@ -88,9 +88,9 @@ TEST_P(WriteTest, SignalOnly) {
 
 } // namespace gtest::nixl::gpu::write
 
-using gtest::nixl::gpu::write::WriteTest;
+using gtest::nixl::gpu::write::writeTest;
 
 INSTANTIATE_TEST_SUITE_P(ucxDeviceApi,
-                         WriteTest,
-                         testing::ValuesIn(WriteTest::getPartialWriteDeviceTestParams()),
-                         TestNameGenerator::device);
+                         writeTest,
+                         testing::ValuesIn(writeTest::getPartialWriteDeviceTestParams()),
+                         testNameGenerator::device);

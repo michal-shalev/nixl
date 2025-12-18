@@ -22,7 +22,7 @@
 #include <cstddef>
 #include <cstdint>
 
-enum class NixlDeviceOperation : uint64_t {
+enum class nixl_device_operation_t : uint64_t {
     SINGLE_WRITE,
     PARTIAL_WRITE,
     WRITE,
@@ -31,8 +31,8 @@ enum class NixlDeviceOperation : uint64_t {
     SIGNAL_WRITE
 };
 
-struct NixlDeviceKernelParams {
-    NixlDeviceOperation operation;
+struct nixlDeviceKernelParams {
+    nixl_device_operation_t operation;
     nixl_gpu_level_t level;
     unsigned numThreads;
     unsigned numBlocks;
@@ -85,11 +85,11 @@ struct NixlDeviceKernelParams {
     } signalWrite;
 };
 
-struct NixlDeviceKernelResult {
+struct nixlDeviceKernelResult {
     nixl_status_t status;
 };
 
-[[nodiscard]] NixlDeviceKernelResult
-launchNixlDeviceKernel(const NixlDeviceKernelParams &params);
+[[nodiscard]] nixlDeviceKernelResult
+launchNixlDeviceKernel(const nixlDeviceKernelParams &params);
 
 #endif // NIXL_DEVICE_KERNELS_CUH

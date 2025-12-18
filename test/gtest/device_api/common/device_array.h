@@ -26,7 +26,7 @@
 #include <vector>
 #include <memory>
 
-template<typename T> class deviceArray {
+template<typename elementType> class deviceArray {
 public:
     explicit deviceArray(size_t count) : count_{count}, ptr_{malloc(count), &free} {}
 
@@ -35,21 +35,21 @@ public:
     operator=(const deviceArray &) = delete;
 
     void
-    copyFromHost(const T *host_data, size_t count) {
+    copyFromHost(const elementType *host_data, size_t count) {
         copy(ptr_.get(), host_data, count, cudaMemcpyHostToDevice);
     }
 
     void
-    copyFromHost(const std::vector<T> &host_vector) {
+    copyFromHost(const std::vector<elementType> &host_vector) {
         copyFromHost(host_vector.data(), host_vector.size());
     }
 
     void
-    copyToHost(T *host_data, size_t count) const {
+    copyToHost(elementType *host_data, size_t count) const {
         copy(host_data, ptr_.get(), count, cudaMemcpyDeviceToHost);
     }
 
-    [[nodiscard]] T *
+    [[nodiscard]] elementType *
     get() const noexcept {
         return ptr_.get();
     }
@@ -65,17 +65,17 @@ private:
         if (count > count_) {
             throw std::out_of_range("deviceArray: copy count exceeds array size");
         }
-        const cudaError_t err = cudaMemcpy(dst, src, count * sizeof(T), kind);
+        const cudaError_t err = cudaMemcpy(dst, src, count * sizeof(elementType), kind);
         if (err != cudaSuccess) {
             throw std::runtime_error(std::string("deviceArray: cudaMemcpy failed: ") +
                                      cudaGetErrorString(err));
         }
     }
 
-    [[nodiscard]] static T *
+    [[nodiscard]] static elementType *
     malloc(size_t count) {
-        T *ptr;
-        const cudaError_t err = cudaMalloc(&ptr, count * sizeof(T));
+        elementType *ptr;
+        const cudaError_t err = cudaMalloc(&ptr, count * sizeof(elementType));
         if (err != cudaSuccess) {
             throw std::runtime_error(std::string("deviceArray: cudaMalloc failed: ") +
                                      cudaGetErrorString(err));
@@ -84,12 +84,12 @@ private:
     }
 
     static void
-    free(T *ptr) {
+    free(elementType *ptr) {
         cudaFree(ptr);
     }
 
     size_t count_;
-    const std::unique_ptr<T, void (*)(T *)> ptr_;
+    const std::unique_ptr<elementType, void (*)(elementType *)> ptr_;
 };
 
 #endif // NIXL_DEVICE_API_TEST_DEVICE_ARRAY_H

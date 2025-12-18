@@ -24,9 +24,9 @@ namespace gtest::nixl::gpu::partial_write {
 
 namespace {
 
-class PartialWriteTest : public DeviceApiTestBase<DeviceTestParams> {
+class partialWriteTest : public deviceApiTestBase<device_test_params_t> {
 protected:
-    void runPartialWrite(const TestSetupData &setup_data,
+    void runPartialWrite(const testSetupData &setup_data,
                         const std::vector<size_t> &sizes,
                         size_t num_iters,
                         uint64_t signal_inc) {
@@ -53,8 +53,8 @@ protected:
         const unsigned signal_desc_index = static_cast<unsigned>(setup_data.dstBuffers.size() - 1);
         constexpr size_t signal_offset = 0;
 
-        NixlDeviceKernelParams params = {};
-        params.operation = NixlDeviceOperation::PARTIAL_WRITE;
+        nixlDeviceKernelParams params = {};
+        params.operation = nixl_device_operation_t::PARTIAL_WRITE;
         params.level = getLevel();
         params.numThreads = defaultNumThreads;
         params.numBlocks = 1;
@@ -81,10 +81,10 @@ protected:
 
 } // namespace
 
-TEST_P(PartialWriteTest, Basic) {
+TEST_P(partialWriteTest, Basic) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
 
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
@@ -94,11 +94,11 @@ TEST_P(PartialWriteTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
-TEST_P(PartialWriteTest, WithoutSignal) {
+TEST_P(partialWriteTest, WithoutSignal) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
     constexpr uint64_t signal_inc = 0;
 
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
@@ -108,10 +108,10 @@ TEST_P(PartialWriteTest, WithoutSignal) {
     ASSERT_NO_FATAL_FAILURE(verifyTestData(sizes, setup_data));
 }
 
-TEST_P(PartialWriteTest, SignalOnly) {
+TEST_P(partialWriteTest, SignalOnly) {
     const std::vector<size_t> sizes;
 
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
 
@@ -121,9 +121,9 @@ TEST_P(PartialWriteTest, SignalOnly) {
 
 } // namespace gtest::nixl::gpu::partial_write
 
-using gtest::nixl::gpu::partial_write::PartialWriteTest;
+using gtest::nixl::gpu::partial_write::partialWriteTest;
 
 INSTANTIATE_TEST_SUITE_P(ucxDeviceApi,
-                         PartialWriteTest,
-                         testing::ValuesIn(PartialWriteTest::getPartialWriteDeviceTestParams()),
-                         TestNameGenerator::device);
+                         partialWriteTest,
+                         testing::ValuesIn(partialWriteTest::getPartialWriteDeviceTestParams()),
+                         testNameGenerator::device);

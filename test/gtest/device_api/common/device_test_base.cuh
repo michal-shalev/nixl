@@ -35,8 +35,8 @@
 #include <vector>
 #include <tuple>
 
-template<typename ParamType = nixl_gpu_level_t>
-class DeviceApiTestBase : public testing::TestWithParam<ParamType> {
+template<typename paramType = nixl_gpu_level_t>
+class deviceApiTestBase : public testing::TestWithParam<paramType> {
 public:
     static constexpr size_t defaultNumThreads = 32;
     static constexpr size_t defaultNumIters = 100;
@@ -65,13 +65,13 @@ public:
         return partialWriteLevels;
     }
 
-    [[nodiscard]] static std::vector<DeviceTestParams> getDeviceTestParams() {
-        std::vector<DeviceTestParams> params;
+    [[nodiscard]] static std::vector<device_test_params_t> getDeviceTestParams() {
+        std::vector<device_test_params_t> params;
         const auto &levels = getTestLevels();
-        const std::vector<SendMode> modes = {
-            SendMode::NODELAY_WITH_REQ,
-            SendMode::NODELAY_WITHOUT_REQ,
-            SendMode::WITHOUT_NODELAY_WITHOUT_REQ,
+        const std::vector<send_mode_t> modes = {
+            send_mode_t::NODELAY_WITH_REQ,
+            send_mode_t::NODELAY_WITHOUT_REQ,
+            send_mode_t::WITHOUT_NODELAY_WITHOUT_REQ,
         };
 
         for (const auto level : levels) {
@@ -82,13 +82,13 @@ public:
         return params;
     }
 
-    [[nodiscard]] static std::vector<DeviceTestParams> getPartialWriteDeviceTestParams() {
-        std::vector<DeviceTestParams> params;
+    [[nodiscard]] static std::vector<device_test_params_t> getPartialWriteDeviceTestParams() {
+        std::vector<device_test_params_t> params;
         const auto &levels = getPartialWriteTestLevels();
-        const std::vector<SendMode> modes = {
-            SendMode::NODELAY_WITH_REQ,
-            SendMode::NODELAY_WITHOUT_REQ,
-            SendMode::WITHOUT_NODELAY_WITHOUT_REQ,
+        const std::vector<send_mode_t> modes = {
+            send_mode_t::NODELAY_WITH_REQ,
+            send_mode_t::NODELAY_WITHOUT_REQ,
+            send_mode_t::WITHOUT_NODELAY_WITHOUT_REQ,
         };
 
         for (const auto level : levels) {
@@ -100,15 +100,15 @@ public:
     }
 
     nixl_gpu_level_t getLevel() const {
-        if constexpr (std::is_same_v<ParamType, nixl_gpu_level_t>) {
+        if constexpr (std::is_same_v<paramType, nixl_gpu_level_t>) {
             return this->GetParam();
         } else {
             return std::get<0>(this->GetParam());
         }
     }
 
-    template<typename T = ParamType>
-    std::enable_if_t<std::is_same_v<T, DeviceTestParams>, SendMode>
+    template<typename testType = paramType>
+    std::enable_if_t<std::is_same_v<testType, device_test_params_t>, send_mode_t>
     getSendMode() const {
         return std::get<1>(this->GetParam());
     }
@@ -119,36 +119,36 @@ protected:
     static constexpr size_t numUcxWorkers = 32;
     static constexpr unsigned defaultChannelId = 0;
 
-    struct TestSetupData {
-        std::vector<MemBuffer> srcBuffers;
-        std::vector<MemBuffer> dstBuffers;
+    struct testSetupData {
+        std::vector<memBuffer> srcBuffers;
+        std::vector<memBuffer> dstBuffers;
         nixlXferReqH *xferReq = nullptr;
         nixlGpuXferReqH gpuReqHandle = nullptr;
 
-        struct CleanupGuard {
-            nixlXferReqH **xfer_req_ptr_;
-            nixlGpuXferReqH *gpu_req_handle_ptr_;
-            DeviceApiTestBase *test_base_;
+        struct cleanupGuard {
+            nixlXferReqH **xferReqPtr_;
+            nixlGpuXferReqH *gpuReqHandlePtr_;
+            deviceApiTestBase *testBase_;
 
-            CleanupGuard(nixlXferReqH **xfer_req_ptr,
+            cleanupGuard(nixlXferReqH **xfer_req_ptr,
                         nixlGpuXferReqH *gpu_req_handle_ptr,
-                        DeviceApiTestBase *test_base)
-                : xfer_req_ptr_(xfer_req_ptr),
-                  gpu_req_handle_ptr_(gpu_req_handle_ptr),
-                  test_base_(test_base) {}
+                        deviceApiTestBase *test_base)
+                : xferReqPtr_(xfer_req_ptr),
+                  gpuReqHandlePtr_(gpu_req_handle_ptr),
+                  testBase_(test_base) {}
 
-            ~CleanupGuard() {
-                if (xfer_req_ptr_ && *xfer_req_ptr_ && test_base_) {
-                    test_base_->cleanupXferRequest(*xfer_req_ptr_, *gpu_req_handle_ptr_);
+            ~cleanupGuard() {
+                if (xferReqPtr_ && *xferReqPtr_ && testBase_) {
+                    testBase_->cleanupXferRequest(*xferReqPtr_, *gpuReqHandlePtr_);
                 }
             }
 
-            CleanupGuard(const CleanupGuard&) = delete;
-            CleanupGuard& operator=(const CleanupGuard&) = delete;
+            cleanupGuard(const cleanupGuard&) = delete;
+            cleanupGuard& operator=(const cleanupGuard&) = delete;
         };
 
-        CleanupGuard makeCleanupGuard(DeviceApiTestBase *test_base) {
-            return CleanupGuard(&xferReq, &gpuReqHandle, test_base);
+        cleanupGuard makeCleanupGuard(deviceApiTestBase *test_base) {
+            return cleanupGuard(&xferReq, &gpuReqHandle, test_base);
         }
     };
 
@@ -181,55 +181,55 @@ protected:
     void SetUp() override;
     void TearDown() override;
 
-    template<typename Desc>
-    [[nodiscard]] nixlDescList<Desc>
-    makeDescList(const std::vector<MemBuffer> &buffers, nixl_mem_t mem_type) {
-        nixlDescList<Desc> descList(mem_type);
+    template<typename descType>
+    [[nodiscard]] nixlDescList<descType>
+    makeDescList(const std::vector<memBuffer> &buffers, nixl_mem_t mem_type) {
+        nixlDescList<descType> desc_list(mem_type);
         for (const auto &buffer : buffers) {
-            descList.addDesc(Desc(buffer.toUintptr(), buffer.getSize(), uint64_t(deviceId_)));
+            desc_list.addDesc(descType(buffer.toUintptr(), buffer.getSize(), uint64_t(deviceId_)));
         }
-        return descList;
+        return desc_list;
     }
 
-    void registerMem(nixlAgent &agent, const std::vector<MemBuffer> &buffers, nixl_mem_t mem_type);
+    void registerMem(nixlAgent &agent, const std::vector<memBuffer> &buffers, nixl_mem_t mem_type);
     void exchangeMD(size_t from_agent, size_t to_agent);
     void invalidateMD();
 
     void createRegisteredMem(nixlAgent &agent, size_t size, size_t count,
-                            nixl_mem_t mem_type, std::vector<MemBuffer> &out);
+                            nixl_mem_t mem_type, std::vector<memBuffer> &buffers_out);
 
     [[nodiscard]] nixlAgent &getAgent(size_t idx);
     [[nodiscard]] std::string getAgentName(size_t idx);
 
-    void createXferRequest(const std::vector<MemBuffer> &srcBuffers,
-                          const std::vector<MemBuffer> &dstBuffers,
+    void createXferRequest(const std::vector<memBuffer> &src_buffers,
+                          const std::vector<memBuffer> &dst_buffers,
                           nixl_mem_t mem_type,
-                          nixlXferReqH *&xferReq,
-                          nixlGpuXferReqH &gpuReqHandle,
-                          const std::string &customParam = "");
+                          nixlXferReqH *&xfer_req,
+                          nixlGpuXferReqH &gpu_req_handle,
+                          std::string_view custom_param = "");
 
-    void cleanupXferRequest(nixlXferReqH *xferReq, nixlGpuXferReqH gpuReqHandle);
-    void launchAndCheckKernel(const NixlDeviceKernelParams &params);
-    void setupWriteTest(size_t size, size_t count, nixl_mem_t mem_type, TestSetupData &data);
+    void cleanupXferRequest(nixlXferReqH *xfer_req, nixlGpuXferReqH gpu_req_handle);
+    void launchAndCheckKernel(const nixlDeviceKernelParams &params);
+    void setupWriteTest(size_t size, size_t count, nixl_mem_t mem_type, testSetupData &setup_data);
     void setupWithSignal(const std::vector<size_t> &sizes,
                         nixl_mem_t mem_type,
-                        TestSetupData &data);
+                        testSetupData &setup_data);
 
-    void initializeTestData(const std::vector<size_t> &sizes, TestSetupData &data) {
+    void initializeTestData(const std::vector<size_t> &sizes, testSetupData &setup_data) {
         for (size_t i = 0; i < sizes.size(); ++i) {
             std::vector<uint8_t> pattern;
             generateTestPattern(pattern, sizes[i], i);
-            copyToDevice(data.srcBuffers[i].get(), pattern.data(), sizes[i]);
+            copyToDevice(setup_data.srcBuffers[i].get(), pattern.data(), sizes[i]);
         }
     }
 
-    void verifyTestData(const std::vector<size_t> &sizes, const TestSetupData &data) {
+    void verifyTestData(const std::vector<size_t> &sizes, const testSetupData &setup_data) {
         for (size_t i = 0; i < sizes.size(); ++i) {
             std::vector<uint8_t> expected_pattern;
             std::vector<uint8_t> received_data(sizes[i]);
 
             generateTestPattern(expected_pattern, sizes[i], i);
-            copyFromDevice(received_data.data(), data.dstBuffers[i].get(), sizes[i]);
+            copyFromDevice(received_data.data(), setup_data.dstBuffers[i].get(), sizes[i]);
 
             ASSERT_EQ(received_data, expected_pattern)
                 << "Data verification failed for buffer " << i;

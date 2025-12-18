@@ -21,16 +21,16 @@ namespace gtest::nixl::gpu::single_write {
 
 namespace {
 
-class SingleWriteTest : public DeviceApiTestBase<DeviceTestParams> {
+class singleWriteTest : public deviceApiTestBase<device_test_params_t> {
 protected:
-    void runTest(TestSetupData &data, size_t size, size_t num_iters) {
-        NixlDeviceKernelParams params = {};
-        params.operation = NixlDeviceOperation::SINGLE_WRITE;
+    void runTest(testSetupData &setup_data, size_t size, size_t num_iters) {
+        nixlDeviceKernelParams params = {};
+        params.operation = nixl_device_operation_t::SINGLE_WRITE;
         params.level = getLevel();
         params.numThreads = defaultNumThreads;
         params.numBlocks = 1;
         params.numIters = num_iters;
-        params.reqHandle = data.gpuReqHandle;
+        params.reqHandle = setup_data.gpuReqHandle;
         params.singleWrite = {0, 0, 0, size, defaultChannelId};
 
         applySendMode(params, getSendMode());
@@ -41,34 +41,34 @@ protected:
 
 } // namespace
 
-TEST_P(SingleWriteTest, Basic) {
+TEST_P(singleWriteTest, Basic) {
     constexpr size_t size = defaultBufferSize;
     constexpr size_t count = defaultBufferCount;
 
-    TestSetupData data;
-    auto guard = data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWriteTest(size, count, VRAM_SEG, data));
+    testSetupData setup_data;
+    auto guard = setup_data.makeCleanupGuard(this);
+    ASSERT_NO_FATAL_FAILURE(setupWriteTest(size, count, VRAM_SEG, setup_data));
 
-    auto *src = static_cast<uint32_t *>(data.srcBuffers[0].get());
+    auto *src = static_cast<uint32_t *>(setup_data.srcBuffers[0].get());
     constexpr uint32_t pattern = testPattern2;
     cudaMemset(src, 0, size);
     cudaMemcpy(src, &pattern, sizeof(pattern), cudaMemcpyHostToDevice);
 
-    ASSERT_NO_FATAL_FAILURE(runTest(data, size, defaultNumIters));
+    ASSERT_NO_FATAL_FAILURE(runTest(setup_data, size, defaultNumIters));
 
     uint32_t dst;
-    cudaMemcpy(&dst, static_cast<uint32_t *>(data.dstBuffers[0].get()),
+    cudaMemcpy(&dst, static_cast<uint32_t *>(setup_data.dstBuffers[0].get()),
                sizeof(uint32_t), cudaMemcpyDeviceToHost);
     ASSERT_EQ(dst, pattern);
 }
 
 // Test with multiple workers using custom worker_id parameter
-TEST_P(SingleWriteTest, MultipleWorkers) {
+TEST_P(singleWriteTest, MultipleWorkers) {
     constexpr size_t size = 4096;
     constexpr size_t num_iters = 100;
 
-    std::vector<std::vector<MemBuffer>> src_buffers(numUcxWorkers);
-    std::vector<std::vector<MemBuffer>> dst_buffers(numUcxWorkers);
+    std::vector<std::vector<memBuffer>> src_buffers(numUcxWorkers);
+    std::vector<std::vector<memBuffer>> dst_buffers(numUcxWorkers);
     std::vector<std::vector<uint32_t>> patterns(numUcxWorkers);
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {
@@ -96,8 +96,8 @@ TEST_P(SingleWriteTest, MultipleWorkers) {
     }
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {
-        NixlDeviceKernelParams params = {};
-        params.operation = NixlDeviceOperation::SINGLE_WRITE;
+        nixlDeviceKernelParams params = {};
+        params.operation = nixl_device_operation_t::SINGLE_WRITE;
         params.level = getLevel();
         params.numThreads = defaultNumThreads;
         params.numBlocks = 1;
@@ -132,8 +132,8 @@ TEST_P(SingleWriteTest, MultipleWorkers) {
 
 } // namespace gtest::nixl::gpu::single_write
 
-using gtest::nixl::gpu::single_write::SingleWriteTest;
+using gtest::nixl::gpu::single_write::singleWriteTest;
 
-INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, SingleWriteTest,
-                         testing::ValuesIn(SingleWriteTest::getDeviceTestParams()),
-                         TestNameGenerator::device);
+INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, singleWriteTest,
+                         testing::ValuesIn(singleWriteTest::getDeviceTestParams()),
+                         testNameGenerator::device);

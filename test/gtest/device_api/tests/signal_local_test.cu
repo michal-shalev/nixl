@@ -22,9 +22,9 @@ namespace gtest::nixl::gpu::signal_local {
 
 namespace {
 
-class SignalLocalTest : public DeviceApiTestBase<nixl_gpu_level_t> {
+class signalLocalTest : public deviceApiTestBase<nixl_gpu_level_t> {
 protected:
-    std::vector<MemBuffer> signal_buffers_;
+    std::vector<memBuffer> signalBuffers_;
 
     void setupLocalSignal(size_t &signal_size) {
         nixl_opt_args_t extra_params = {.backends = {backendHandles_[senderAgent]}};
@@ -32,19 +32,19 @@ protected:
             getAgent(senderAgent).getGpuSignalSize(signal_size, &extra_params);
         ASSERT_EQ(status, NIXL_SUCCESS);
 
-        signal_buffers_.clear();
-        signal_buffers_.emplace_back(signal_size, VRAM_SEG);
+        signalBuffers_.clear();
+        signalBuffers_.emplace_back(signal_size, VRAM_SEG);
 
-        cudaMemset(signal_buffers_[0].get(), 0, signal_size);
+        cudaMemset(signalBuffers_[0].get(), 0, signal_size);
     }
 
     void* getSignalBuffer() {
-        return signal_buffers_.empty() ? nullptr : signal_buffers_[0].get();
+        return signalBuffers_.empty() ? nullptr : signalBuffers_[0].get();
     }
 
     void writeSignal(void *signal_addr, uint64_t value, size_t num_threads) {
-        NixlDeviceKernelParams params = {};
-        params.operation = NixlDeviceOperation::SIGNAL_WRITE;
+        nixlDeviceKernelParams params = {};
+        params.operation = nixl_device_operation_t::SIGNAL_WRITE;
         params.level = GetParam();
         params.numThreads = num_threads;
         params.numBlocks = 1;
@@ -58,8 +58,8 @@ protected:
     }
 
     void readAndVerifySignal(const void *signal_addr, uint64_t expected_value, size_t num_threads) {
-        NixlDeviceKernelParams params = {};
-        params.operation = NixlDeviceOperation::SIGNAL_WAIT;
+        nixlDeviceKernelParams params = {};
+        params.operation = nixl_device_operation_t::SIGNAL_WAIT;
         params.level = GetParam();
         params.numThreads = num_threads;
         params.numBlocks = 1;
@@ -75,7 +75,7 @@ protected:
 
 } // namespace
 
-TEST_P(SignalLocalTest, WriteRead) {
+TEST_P(signalLocalTest, WriteRead) {
     size_t signal_size;
     ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
 
@@ -85,7 +85,7 @@ TEST_P(SignalLocalTest, WriteRead) {
     ASSERT_NO_FATAL_FAILURE(readAndVerifySignal(getSignalBuffer(), test_value, defaultNumThreads));
 }
 
-TEST_P(SignalLocalTest, MultipleWrites) {
+TEST_P(signalLocalTest, MultipleWrites) {
     size_t signal_size;
     ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
 
@@ -97,7 +97,7 @@ TEST_P(SignalLocalTest, MultipleWrites) {
     }
 }
 
-TEST_P(SignalLocalTest, SingleThread) {
+TEST_P(signalLocalTest, SingleThread) {
     size_t signal_size;
     ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
 
@@ -107,7 +107,7 @@ TEST_P(SignalLocalTest, SingleThread) {
     ASSERT_NO_FATAL_FAILURE(readAndVerifySignal(getSignalBuffer(), test_value, 1));
 }
 
-TEST_P(SignalLocalTest, ZeroValue) {
+TEST_P(signalLocalTest, ZeroValue) {
     size_t signal_size;
     ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
 
@@ -117,7 +117,7 @@ TEST_P(SignalLocalTest, ZeroValue) {
     ASSERT_NO_FATAL_FAILURE(readAndVerifySignal(getSignalBuffer(), zero_value, defaultNumThreads));
 }
 
-TEST_P(SignalLocalTest, MaxValue) {
+TEST_P(signalLocalTest, MaxValue) {
     size_t signal_size;
     ASSERT_NO_FATAL_FAILURE(setupLocalSignal(signal_size));
 
@@ -129,8 +129,8 @@ TEST_P(SignalLocalTest, MaxValue) {
 
 } // namespace gtest::nixl::gpu::signal_local
 
-using gtest::nixl::gpu::signal_local::SignalLocalTest;
+using gtest::nixl::gpu::signal_local::signalLocalTest;
 
-INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, SignalLocalTest,
-                         testing::ValuesIn(SignalLocalTest::getTestLevels()),
-                         TestNameGenerator::level);
+INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, signalLocalTest,
+                         testing::ValuesIn(signalLocalTest::getTestLevels()),
+                         testNameGenerator::level);

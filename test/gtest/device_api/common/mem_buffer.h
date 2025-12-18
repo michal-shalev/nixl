@@ -27,9 +27,9 @@
 #include <stdexcept>
 #include <string>
 
-class MemBuffer {
+class memBuffer {
 public:
-    MemBuffer(size_t size, nixl_mem_t mem_type)
+    memBuffer(size_t size, nixl_mem_t mem_type)
         : ptr_(allocate(size, mem_type), [mem_type](void *ptr) { release(ptr, mem_type); }),
           size_(size) {}
 

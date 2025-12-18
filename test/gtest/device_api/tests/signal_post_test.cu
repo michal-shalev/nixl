@@ -23,9 +23,9 @@ namespace gtest::nixl::gpu::signal_post {
 
 namespace {
 
-class SignalPostTest : public DeviceApiTestBase<DeviceTestParams> {
+class signalPostTest : public deviceApiTestBase<device_test_params_t> {
 protected:
-    void setupSignalPost(TestSetupData &data) {
+    void setupSignalPost(testSetupData &data) {
         nixl_opt_args_t extra_params = {.backends = {backendHandles_[receiverAgent]}};
         size_t signal_size;
         nixl_status_t status =
@@ -46,12 +46,12 @@ protected:
                          data.xferReq, data.gpuReqHandle);
     }
 
-    void runSignalPost(TestSetupData &setup_data, size_t num_iters,
+    void runSignalPost(testSetupData &setup_data, size_t num_iters,
                       unsigned index, uint64_t signal_inc, unsigned channel_id) {
         constexpr size_t signal_offset = 0;
 
-        NixlDeviceKernelParams post_params = {};
-        post_params.operation = NixlDeviceOperation::SIGNAL_POST;
+        nixlDeviceKernelParams post_params = {};
+        post_params.operation = nixl_device_operation_t::SIGNAL_POST;
         post_params.level = getLevel();
         post_params.numThreads = defaultNumThreads;
         post_params.numBlocks = 1;
@@ -69,9 +69,9 @@ protected:
         ASSERT_EQ(result.status, NIXL_SUCCESS);
     }
 
-    void verifySignal(TestSetupData &setup_data, uint64_t expected_value) {
-        NixlDeviceKernelParams read_params = {};
-        read_params.operation = NixlDeviceOperation::SIGNAL_WAIT;
+    void verifySignal(testSetupData &setup_data, uint64_t expected_value) {
+        nixlDeviceKernelParams read_params = {};
+        read_params.operation = nixl_device_operation_t::SIGNAL_WAIT;
         read_params.level = getLevel();
         read_params.numThreads = defaultNumThreads;
         read_params.numBlocks = 1;
@@ -87,11 +87,11 @@ protected:
 
 } // namespace
 
-TEST_P(SignalPostTest, Basic) {
+TEST_P(signalPostTest, Basic) {
 #ifndef HAVE_UCX_GPU_DEVICE_API
     GTEST_SKIP() << "UCX GPU device API not available, skipping test";
 #else
-    TestSetupData setup_data;
+    testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
     ASSERT_NO_FATAL_FAILURE(setupSignalPost(setup_data));
 
@@ -109,8 +109,8 @@ TEST_P(SignalPostTest, Basic) {
 
 } // namespace gtest::nixl::gpu::signal_post
 
-using gtest::nixl::gpu::signal_post::SignalPostTest;
+using gtest::nixl::gpu::signal_post::signalPostTest;
 
-INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, SignalPostTest,
-                         testing::ValuesIn(SignalPostTest::getDeviceTestParams()),
-                         TestNameGenerator::device);
+INSTANTIATE_TEST_SUITE_P(ucxDeviceApi, signalPostTest,
+                         testing::ValuesIn(signalPostTest::getDeviceTestParams()),
+                         testNameGenerator::device);
