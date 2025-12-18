@@ -56,12 +56,6 @@ deviceApiTestBase<paramType>::SetUp() {
 
 template<typename paramType>
 void
-deviceApiTestBase<paramType>::TearDown() {
-    agents_.clear();
-}
-
-template<typename paramType>
-void
 deviceApiTestBase<paramType>::registerMem(nixlAgent &agent,
                                           const std::vector<testArray<uint8_t>> &buffers,
                                           nixl_mem_t mem_type) {

@@ -176,8 +176,6 @@ protected:
     getBackendParams();
     void
     SetUp() override;
-    void
-    TearDown() override;
 
     template<typename descType>
     [[nodiscard]] nixlDescList<descType>
