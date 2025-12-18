@@ -43,8 +43,12 @@ namespace {
 
             ASSERT_NO_FATAL_FAILURE(exchangeMD(senderAgent, receiverAgent));
 
-            createXferRequest(
-                data.srcBuffers, data.dstBuffers, VRAM_SEG, data.xferReq, data.gpuReqHandle);
+            createXferRequest(data.srcBuffers,
+                              VRAM_SEG,
+                              data.dstBuffers,
+                              VRAM_SEG,
+                              data.xferReq,
+                              data.gpuReqHandle);
         }
 
         void

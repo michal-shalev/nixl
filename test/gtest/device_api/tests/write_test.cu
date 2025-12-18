@@ -52,7 +52,7 @@ TEST_P(writeTest, Basic) {
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, defaultNumIters, testSignalIncrement));
@@ -65,7 +65,7 @@ TEST_P(writeTest, WithoutSignal) {
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, 1000, signal_inc));
@@ -77,7 +77,7 @@ TEST_P(writeTest, SignalOnly) {
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, 1000, testSignalIncrement));
 }

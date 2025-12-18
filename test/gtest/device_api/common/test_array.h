@@ -22,6 +22,7 @@
 #include <nixl.h>
 
 #include <cstddef>
+#include <cstring>
 #include <memory>
 #include <new>
 #include <stdexcept>
@@ -71,6 +72,11 @@ private:
         if (count > count_) {
             throw std::out_of_range("testArray: copy count exceeds array size");
         }
+        if (mem_type_ == DRAM_SEG) {
+            std::memcpy(dst, src, count * sizeof(elementType));
+            return;
+        }
+
         const cudaError_t err = cudaMemcpy(dst, src, count * sizeof(elementType), kind);
         if (err != cudaSuccess) {
             throw std::runtime_error(std::string("testArray: cudaMemcpy failed: ") +

@@ -114,7 +114,7 @@ public:
     }
 
     template<typename testType = paramType>
-    std::enable_if_t<std::is_same_v<testType, device_test_params_t>, send_mode_t>
+    std::enable_if_t<!std::is_same_v<testType, nixl_gpu_level_t>, send_mode_t>
     getSendMode() const {
         return std::get<1>(this->GetParam());
     }
@@ -172,24 +172,6 @@ protected:
         }
     }
 
-    static void
-    copyToDevice(void *dst, const void *src, size_t size) {
-        const cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice);
-        if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("cudaMemcpy to device failed: ") +
-                                     cudaGetErrorString(err));
-        }
-    }
-
-    static void
-    copyFromDevice(void *dst, const void *src, size_t size) {
-        const cudaError_t err = cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
-        if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("cudaMemcpy from device failed: ") +
-                                     cudaGetErrorString(err));
-        }
-    }
-
     nixl_b_params_t
     getBackendParams();
     void
@@ -231,8 +213,9 @@ protected:
 
     void
     createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
+                      nixl_mem_t src_mem_type,
                       const std::vector<testArray<uint8_t>> &dst_buffers,
-                      nixl_mem_t mem_type,
+                      nixl_mem_t dst_mem_type,
                       nixlXferReqH *&xfer_req,
                       nixlGpuXferReqH &gpu_req_handle,
                       std::string_view custom_param = "");
@@ -242,10 +225,15 @@ protected:
     void
     launchAndCheckKernel(const nixlDeviceKernelParams &params);
     void
-    setupWriteTest(size_t size, size_t count, nixl_mem_t mem_type, testSetupData &setup_data);
+    setupWriteTest(size_t size,
+                   size_t count,
+                   nixl_mem_t src_mem_type,
+                   nixl_mem_t dst_mem_type,
+                   testSetupData &setup_data);
     void
     setupWithSignal(const std::vector<size_t> &sizes,
-                    nixl_mem_t mem_type,
+                    nixl_mem_t src_mem_type,
+                    nixl_mem_t dst_mem_type,
                     testSetupData &setup_data);
 
     void
@@ -253,7 +241,7 @@ protected:
         for (size_t i = 0; i < sizes.size(); ++i) {
             std::vector<uint8_t> pattern;
             generateTestPattern(pattern, sizes[i], i);
-            copyToDevice(setup_data.srcBuffers[i].get(), pattern.data(), sizes[i]);
+            setup_data.srcBuffers[i].copyFromHost(pattern.data(), sizes[i]);
         }
     }
 
@@ -264,7 +252,7 @@ protected:
             std::vector<uint8_t> received_data(sizes[i]);
 
             generateTestPattern(expected_pattern, sizes[i], i);
-            copyFromDevice(received_data.data(), setup_data.dstBuffers[i].get(), sizes[i]);
+            setup_data.dstBuffers[i].copyToHost(received_data.data(), sizes[i]);
 
             ASSERT_EQ(received_data, expected_pattern)
                 << "Data verification failed for buffer " << i;
