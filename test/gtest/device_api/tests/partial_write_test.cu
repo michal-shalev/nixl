@@ -75,9 +75,9 @@ namespace {
             params.partialWrite.signalOffset = signal_offset;
             params.partialWrite.channelId = defaultChannelId;
 
-            const auto result = launchNixlDeviceKernel(params);
-            ASSERT_EQ(result.status, NIXL_SUCCESS)
-                << "Kernel execution failed with status: " << result.status;
+            const nixl_status_t status = launchNixlDeviceKernel(params);
+            ASSERT_EQ(status, NIXL_SUCCESS)
+                << "Kernel execution failed with status: " << status;
         }
     };
 

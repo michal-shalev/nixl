@@ -140,7 +140,7 @@ doOperation(const nixlDeviceKernelParams &params, nixlGpuXferStatusH *req_ptr) {
     }
 
     if (status != NIXL_IN_PROG) {
-        return (status == NIXL_SUCCESS) ? NIXL_SUCCESS : NIXL_ERR_BACKEND;
+        return status;
     }
 
     if (!params.withNoDelay || (req_ptr == nullptr)) {
@@ -155,24 +155,15 @@ doOperation(const nixlDeviceKernelParams &params, nixlGpuXferStatusH *req_ptr) {
 }
 
 template<nixl_gpu_level_t level>
-__device__ void
+__device__ nixl_status_t
 kernelJob(const nixlDeviceKernelParams &params,
-          nixlDeviceKernelResult *result_ptr,
           nixlGpuXferStatusH *shared_reqs) {
-    if (result_ptr == nullptr) {
-        return;
-    }
-
-    nixl_status_t &status = result_ptr->status;
-
     if (blockDim.x > max_threads_per_block) {
-        status = NIXL_ERR_INVALID_PARAM;
-        return;
+        return NIXL_ERR_INVALID_PARAM;
     }
 
     if (params.numIters == 0) {
-        status = NIXL_ERR_INVALID_PARAM;
-        return;
+        return NIXL_ERR_INVALID_PARAM;
     }
 
     nixlGpuXferStatusH *req_ptr = nullptr;
@@ -181,10 +172,11 @@ kernelJob(const nixlDeviceKernelParams &params,
         req_ptr = &shared_reqs[req_index];
     }
 
+    nixl_status_t status;
     for (size_t i = 0; i < params.numIters - 1; i++) {
         status = doOperation<level>(params, req_ptr);
         if (status != NIXL_SUCCESS) {
-            return;
+            return status;
         }
     }
 
@@ -196,24 +188,27 @@ kernelJob(const nixlDeviceKernelParams &params,
         const size_t req_index = getStatusIndex<level>();
         status_ptr = &shared_reqs[req_index];
     }
-    status = doOperation<level>(params_force_completion, status_ptr);
+
+    return doOperation<level>(params_force_completion, status_ptr);
 }
 
 template<nixl_gpu_level_t level>
 __global__ void
-nixlTestKernel(const nixlDeviceKernelParams params, nixlDeviceKernelResult *result_ptr) {
+nixlTestKernel(const nixlDeviceKernelParams params, nixl_status_t *status_ptr) {
     extern __shared__ nixlGpuXferStatusH shared_reqs[];
-    kernelJob<level>(params, result_ptr, shared_reqs);
+    if (status_ptr != nullptr) {
+        *status_ptr = kernelJob<level>(params, shared_reqs);
+    }
     __threadfence_system();
 }
 
 } // namespace
 
-nixlDeviceKernelResult
+nixl_status_t
 launchNixlDeviceKernel(const nixlDeviceKernelParams &params) {
-    testArray<nixlDeviceKernelResult> result(1);
-    nixlDeviceKernelResult init_result{NIXL_ERR_INVALID_PARAM};
-    result.copyFromHost(&init_result, 1);
+    testArray<nixl_status_t> result{1};
+    nixl_status_t init_status = NIXL_ERR_INVALID_PARAM;
+    result.copyFromHost(&init_status, 1);
 
     size_t shared_mem_size = 0;
     switch (params.level) {
@@ -235,19 +230,16 @@ launchNixlDeviceKernel(const nixlDeviceKernelParams &params) {
         nixlTestKernel<nixl_gpu_level_t::BLOCK>
             <<<params.numBlocks, params.numThreads, shared_mem_size>>>(params, result.get());
         break;
-    default: {
-        nixlDeviceKernelResult error_result{NIXL_ERR_INVALID_PARAM};
-        return error_result;
-    }
+    default:
+        return NIXL_ERR_INVALID_PARAM;
     }
 
     const nixl_status_t sync_status = checkCudaErrors();
     if (sync_status != NIXL_SUCCESS) {
-        nixlDeviceKernelResult error_result{sync_status};
-        return error_result;
+        return sync_status;
     }
 
-    nixlDeviceKernelResult host_result;
-    result.copyToHost(&host_result, 1);
-    return host_result;
+    nixl_status_t host_status;
+    result.copyToHost(&host_status, 1);
+    return host_status;
 }

@@ -56,8 +56,8 @@ namespace {
             params.signalWrite.signalAddr = signal_addr;
             params.signalWrite.value = value;
 
-            const auto result = launchNixlDeviceKernel(params);
-            ASSERT_EQ(result.status, NIXL_SUCCESS);
+            const nixl_status_t status = launchNixlDeviceKernel(params);
+            ASSERT_EQ(status, NIXL_SUCCESS);
         }
 
         void
@@ -72,8 +72,8 @@ namespace {
             params.signalWait.signalAddr = signal_addr;
             params.signalWait.expectedValue = expected_value;
 
-            const auto result = launchNixlDeviceKernel(params);
-            ASSERT_EQ(result.status, NIXL_SUCCESS);
+            const nixl_status_t status = launchNixlDeviceKernel(params);
+            ASSERT_EQ(status, NIXL_SUCCESS);
         }
     };
 

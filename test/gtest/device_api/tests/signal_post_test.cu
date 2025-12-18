@@ -70,8 +70,8 @@ namespace {
             post_params.signalPost.signalOffset = signal_offset;
             post_params.signalPost.channelId = channel_id;
 
-            auto result = launchNixlDeviceKernel(post_params);
-            ASSERT_EQ(result.status, NIXL_SUCCESS);
+            const nixl_status_t status = launchNixlDeviceKernel(post_params);
+            ASSERT_EQ(status, NIXL_SUCCESS);
         }
 
         void
@@ -86,8 +86,8 @@ namespace {
             read_params.signalWait.signalAddr = setup_data.dstBuffers[0].get();
             read_params.signalWait.expectedValue = expected_value;
 
-            auto result = launchNixlDeviceKernel(read_params);
-            ASSERT_EQ(result.status, NIXL_SUCCESS);
+            const nixl_status_t status = launchNixlDeviceKernel(read_params);
+            ASSERT_EQ(status, NIXL_SUCCESS);
         }
     };
 

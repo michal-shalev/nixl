@@ -116,8 +116,8 @@ TEST_P(singleWriteTest, MultipleWorkers) {
 
         applySendMode(params, getSendMode());
 
-        const auto result = launchNixlDeviceKernel(params);
-        ASSERT_EQ(result.status, NIXL_SUCCESS) << "Kernel launch failed for worker " << worker_id;
+        const nixl_status_t status = launchNixlDeviceKernel(params);
+        ASSERT_EQ(status, NIXL_SUCCESS) << "Kernel launch failed for worker " << worker_id;
     }
 
     for (size_t worker_id = 0; worker_id < numUcxWorkers; worker_id++) {

@@ -38,11 +38,11 @@ namespace {
             applySendMode(params, getSendMode());
 
             params.write.signalInc = signal_inc;
-            params.write.channelId = channel_id;
+        params.write.channelId = channel_id;
 
-            const auto result = launchNixlDeviceKernel(params);
-            ASSERT_EQ(result.status, NIXL_SUCCESS)
-                << "Kernel execution failed with status: " << result.status;
+        const nixl_status_t status = launchNixlDeviceKernel(params);
+        ASSERT_EQ(status, NIXL_SUCCESS)
+            << "Kernel execution failed with status: " << status;
         }
     };
 

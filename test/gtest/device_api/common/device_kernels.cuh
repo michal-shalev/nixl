@@ -85,11 +85,7 @@ struct nixlDeviceKernelParams {
     } signalWrite;
 };
 
-struct nixlDeviceKernelResult {
-    nixl_status_t status;
-};
-
-[[nodiscard]] nixlDeviceKernelResult
+[[nodiscard]] nixl_status_t
 launchNixlDeviceKernel(const nixlDeviceKernelParams &params);
 
 #endif // NIXL_DEVICE_KERNELS_CUH

@@ -35,25 +35,6 @@ public:
           mem_type_{mem_type},
           ptr_{malloc(count, mem_type), deleter{mem_type}} {}
 
-    testArray(const testArray &) = delete;
-    testArray &
-    operator=(const testArray &) = delete;
-
-    testArray(testArray &&other) noexcept
-        : count_{other.count_},
-          mem_type_{other.mem_type_},
-          ptr_{std::move(other.ptr_)} {}
-
-    testArray &
-    operator=(testArray &&other) noexcept {
-        if (this != &other) {
-            count_ = other.count_;
-            mem_type_ = other.mem_type_;
-            ptr_ = std::move(other.ptr_);
-        }
-        return *this;
-    }
-
     void
     copyFromHost(const elementType *host_data, size_t count) {
         copy(ptr_.get(), host_data, count, cudaMemcpyHostToDevice);
