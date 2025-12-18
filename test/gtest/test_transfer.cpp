@@ -728,6 +728,9 @@ TEST_P(TestTransfer, getMappedPtrs) {
         GTEST_SKIP() << "No CUDA-capable GPU is available, skipping test.";
     }
 
+    // Enable cuda_ipc for same-process transfers (needed for getMappedPtrs)
+    setenv("UCX_CUDA_IPC_ENABLE_SAME_PROCESS", "y", 0);
+
     std::vector<MemBuffer> buffers_local;
     std::vector<MemBuffer> buffers_remote;
 

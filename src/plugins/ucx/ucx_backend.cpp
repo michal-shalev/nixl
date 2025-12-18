@@ -1111,11 +1111,6 @@ nixlUcxEngine::nixlUcxEngine(const nixlBackendInitParams &init_params)
     const auto engine_config =
         (engine_config_it != custom_params->end()) ? engine_config_it->second : "";
 
-#ifdef HAVE_CUDA
-    // Enable cuda_ipc for same-process transfers (needed for getMappedPtrs)
-    setenv("UCX_CUDA_IPC_ENABLE_SAME_PROCESS", "y", 0);
-#endif
-
     uc = std::make_unique<nixlUcxContext>(
         devs, init_params.enableProgTh, num_workers, init_params.syncMode, engine_config);
 
