@@ -25,6 +25,19 @@ namespace {
 
     class signalPostTest : public deviceApiTestBase<device_test_params_t> {
     protected:
+        size_t
+        getNumOpsMultiplier() const {
+            switch (getLevel()) {
+            case nixl_gpu_level_t::THREAD:
+                return defaultNumThreads;
+            case nixl_gpu_level_t::WARP:
+                return defaultNumThreads / 32;
+            case nixl_gpu_level_t::BLOCK:
+            default:
+                return 1;
+            }
+        }
+
         void
         setupSignalPost(testSetupData &data) {
             nixl_opt_args_t extra_params = {.backends = {getBackendHandle(receiverAgent)}};
@@ -108,7 +121,7 @@ TEST_P(signalPostTest, Basic) {
     constexpr size_t num_iters = defaultNumIters;
     constexpr unsigned index = 0;
     constexpr uint64_t signal_inc = testSignalIncrement;
-    const uint64_t expected_value = signal_inc * num_iters;
+    const uint64_t expected_value = signal_inc * num_iters * getNumOpsMultiplier();
 
     ASSERT_NO_FATAL_FAILURE(
         runSignalPost(setup_data, num_iters, index, signal_inc, defaultChannelId));
