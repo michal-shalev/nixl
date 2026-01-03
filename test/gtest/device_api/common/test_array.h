@@ -67,22 +67,32 @@ public:
     }
 
 private:
-    void
-    copy(void *dst, const void *src, size_t count, cudaMemcpyKind kind) const {
-        if (count > count_) {
-            throw std::out_of_range("testArray: copy count exceeds array size");
-        }
-        if (mem_type_ == DRAM_SEG) {
-            std::memcpy(dst, src, count * sizeof(elementType));
-            return;
-        }
+    struct deleter {
+        nixl_mem_t mem_type;
 
-        const cudaError_t err = cudaMemcpy(dst, src, count * sizeof(elementType), kind);
-        if (err != cudaSuccess) {
-            throw std::runtime_error(std::string("testArray: cudaMemcpy failed: ") +
-                                     cudaGetErrorString(err));
+        void
+        operator()(elementType *ptr) const {
+            if (ptr == nullptr) {
+                return;
+            }
+
+            switch (mem_type) {
+            case VRAM_SEG:
+                cudaFree(ptr);
+                break;
+            case DRAM_SEG:
+                ::operator delete(ptr);
+                break;
+            default:
+                cudaFree(ptr);
+                break;
+            }
         }
-    }
+    };
+
+    size_t count_;
+    nixl_mem_t mem_type_;
+    std::unique_ptr<elementType, deleter> ptr_;
 
     [[nodiscard]] static elementType *
     malloc(size_t count, nixl_mem_t mem_type) {
@@ -114,32 +124,22 @@ private:
         return ptr;
     }
 
-    struct deleter {
-        nixl_mem_t mem_type;
-
-        void
-        operator()(elementType *ptr) const {
-            if (ptr == nullptr) {
-                return;
-            }
-
-            switch (mem_type) {
-            case VRAM_SEG:
-                cudaFree(ptr);
-                break;
-            case DRAM_SEG:
-                ::operator delete(ptr);
-                break;
-            default:
-                cudaFree(ptr);
-                break;
-            }
+    void
+    copy(void *dst, const void *src, size_t count, cudaMemcpyKind kind) const {
+        if (count > count_) {
+            throw std::out_of_range("testArray: copy count exceeds array size");
         }
-    };
+        if (mem_type_ == DRAM_SEG) {
+            std::memcpy(dst, src, count * sizeof(elementType));
+            return;
+        }
 
-    size_t count_;
-    nixl_mem_t mem_type_;
-    std::unique_ptr<elementType, deleter> ptr_;
+        const cudaError_t err = cudaMemcpy(dst, src, count * sizeof(elementType), kind);
+        if (err != cudaSuccess) {
+            throw std::runtime_error(std::string("testArray: cudaMemcpy failed: ") +
+                                     cudaGetErrorString(err));
+        }
+    }
 };
 
 #endif // NIXL_DEVICE_API_TEST_ARRAY_H

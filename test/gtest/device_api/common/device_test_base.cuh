@@ -43,6 +43,8 @@ public:
     static constexpr size_t defaultNumIters = 100;
     static constexpr size_t defaultBufferSize = 128;
     static constexpr size_t defaultBufferCount = 32;
+    static constexpr size_t defaultNumUcxWorkers = 1;
+    static constexpr unsigned multiChannelCount = 32;
     static constexpr std::string_view notificationMessage = "notification";
 
     static constexpr uint64_t testSignalIncrement = 42;
@@ -70,38 +72,12 @@ public:
 
     [[nodiscard]] static std::vector<device_test_params_t>
     getDeviceTestParams() {
-        std::vector<device_test_params_t> params;
-        const auto &levels = getTestLevels();
-        const std::vector<send_mode_t> modes = {
-            send_mode_t::NODELAY_WITH_REQ,
-            send_mode_t::NODELAY_WITHOUT_REQ,
-            send_mode_t::WITHOUT_NODELAY_WITHOUT_REQ,
-        };
-
-        for (const auto level : levels) {
-            for (const auto mode : modes) {
-                params.emplace_back(level, mode);
-            }
-        }
-        return params;
+        return generateDeviceTestParams(getTestLevels());
     }
 
     [[nodiscard]] static std::vector<device_test_params_t>
     getPartialWriteDeviceTestParams() {
-        std::vector<device_test_params_t> params;
-        const auto &levels = getPartialWriteTestLevels();
-        const std::vector<send_mode_t> modes = {
-            send_mode_t::NODELAY_WITH_REQ,
-            send_mode_t::NODELAY_WITHOUT_REQ,
-            send_mode_t::WITHOUT_NODELAY_WITHOUT_REQ,
-        };
-
-        for (const auto level : levels) {
-            for (const auto mode : modes) {
-                params.emplace_back(level, mode);
-            }
-        }
-        return params;
+        return generateDeviceTestParams(getPartialWriteTestLevels());
     }
 
     nixl_gpu_level_t
@@ -109,21 +85,27 @@ public:
         if constexpr (std::is_same_v<paramType, nixl_gpu_level_t>) {
             return this->GetParam();
         } else {
-            return std::get<0>(this->GetParam());
+            return this->GetParam().level;
         }
     }
 
     template<typename testType = paramType>
     std::enable_if_t<!std::is_same_v<testType, nixl_gpu_level_t>, send_mode_t>
     getSendMode() const {
-        return std::get<1>(this->GetParam());
+        return this->GetParam().mode;
+    }
+
+    template<typename testType = paramType>
+    std::enable_if_t<std::is_same_v<testType, device_test_params_t>, nixl_mem_t>
+    getDstMemType() const {
+        return this->GetParam().mem_type;
     }
 
 protected:
     static constexpr size_t senderAgent = 0;
     static constexpr size_t receiverAgent = 1;
-    static constexpr size_t numUcxWorkers = 32;
-    static constexpr unsigned defaultChannelId = 0;
+    static constexpr nixl_mem_t srcMemType = VRAM_SEG;
+    static constexpr size_t defaultBufferAllocCount = 1;
 
     struct testSetupData {
         std::vector<testArray<uint8_t>> srcBuffers;
@@ -163,17 +145,19 @@ protected:
     static nixlAgentConfig
     getConfig();
 
-    static void
-    generateTestPattern(std::vector<uint8_t> &pattern, size_t size, size_t offset = 0) {
+    static std::vector<uint8_t>
+    generateTestPattern(size_t size, size_t offset = 0) {
         constexpr size_t patternModulo = 256;
-        pattern.resize(size);
+        std::vector<uint8_t> pattern(size);
         for (size_t i = 0; i < size; ++i) {
             pattern[i] = static_cast<uint8_t>((offset * patternModulo + i) % patternModulo);
         }
+        return pattern;
     }
 
     nixl_b_params_t
     getBackendParams();
+
     void
     SetUp() override;
 
@@ -205,9 +189,9 @@ protected:
                         std::vector<testArray<uint8_t>> &buffers_out);
 
     [[nodiscard]] nixlAgent &
-    getAgent(size_t idx);
+    getAgent(size_t idx) const;
     [[nodiscard]] std::string
-    getAgentName(size_t idx);
+    getAgentName(size_t idx) const;
 
     void
     createXferRequest(const std::vector<testArray<uint8_t>> &src_buffers,
@@ -237,8 +221,7 @@ protected:
     void
     initializeTestData(const std::vector<size_t> &sizes, testSetupData &setup_data) {
         for (size_t i = 0; i < sizes.size(); ++i) {
-            std::vector<uint8_t> pattern;
-            generateTestPattern(pattern, sizes[i], i);
+            const auto pattern = generateTestPattern(sizes[i], i);
             setup_data.srcBuffers[i].copyFromHost(pattern.data(), sizes[i]);
         }
     }
@@ -246,10 +229,9 @@ protected:
     void
     verifyTestData(const std::vector<size_t> &sizes, const testSetupData &setup_data) {
         for (size_t i = 0; i < sizes.size(); ++i) {
-            std::vector<uint8_t> expected_pattern;
+            const auto expected_pattern = generateTestPattern(sizes[i], i);
             std::vector<uint8_t> received_data(sizes[i]);
 
-            generateTestPattern(expected_pattern, sizes[i], i);
             setup_data.dstBuffers[i].copyToHost(received_data.data(), sizes[i]);
 
             ASSERT_EQ(received_data, expected_pattern)
@@ -266,6 +248,27 @@ private:
     static constexpr uint64_t deviceId_ = 0;
     std::vector<std::unique_ptr<nixlAgent>> agents_;
     std::vector<nixlBackendH *> backendHandles_;
+
+    static std::vector<device_test_params_t>
+    generateDeviceTestParams(const std::vector<nixl_gpu_level_t> &levels) {
+        std::vector<device_test_params_t> params;
+        const std::vector<send_mode_t> modes = {
+            send_mode_t::NODELAY_WITH_REQ,
+            send_mode_t::NODELAY_WITHOUT_REQ,
+            send_mode_t::WITHOUT_NODELAY_WITHOUT_REQ,
+            send_mode_t::MULTI_CHANNEL,
+        };
+        const std::vector<nixl_mem_t> mem_types = {VRAM_SEG, DRAM_SEG};
+
+        for (const auto level : levels) {
+            for (const auto mode : modes) {
+                for (const auto mem_type : mem_types) {
+                    params.emplace_back(level, mode, mem_type);
+                }
+            }
+        }
+        return params;
+    }
 };
 
 #endif // NIXL_DEVICE_TEST_BASE_CUH

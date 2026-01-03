@@ -46,20 +46,21 @@ namespace {
                 getAgent(receiverAgent).getGpuSignalSize(signal_size, &extra_params);
             ASSERT_EQ(status, NIXL_SUCCESS);
 
-            createRegisteredMem(getAgent(receiverAgent), signal_size, 1, VRAM_SEG, data.dstBuffers);
+            const nixl_mem_t dst_mem_type = getDstMemType();
+            createRegisteredMem(getAgent(receiverAgent), signal_size, defaultBufferAllocCount, dst_mem_type, data.dstBuffers);
 
-            auto signal_desc_list = makeDescList<nixlBlobDesc>(data.dstBuffers, VRAM_SEG);
+            auto signal_desc_list = makeDescList<nixlBlobDesc>(data.dstBuffers, dst_mem_type);
             status = getAgent(receiverAgent).prepGpuSignal(signal_desc_list, &extra_params);
             ASSERT_EQ(status, NIXL_SUCCESS);
 
-            createRegisteredMem(getAgent(senderAgent), signal_size, 1, VRAM_SEG, data.srcBuffers);
+            createRegisteredMem(getAgent(senderAgent), signal_size, defaultBufferAllocCount, srcMemType, data.srcBuffers);
 
             ASSERT_NO_FATAL_FAILURE(exchangeMD(senderAgent, receiverAgent));
 
             createXferRequest(data.srcBuffers,
-                              VRAM_SEG,
+                              srcMemType,
                               data.dstBuffers,
-                              VRAM_SEG,
+                              dst_mem_type,
                               data.xferReq,
                               data.gpuReqHandle);
         }
@@ -68,8 +69,7 @@ namespace {
         runSignalPost(testSetupData &setup_data,
                       size_t num_iters,
                       unsigned index,
-                      uint64_t signal_inc,
-                      unsigned channel_id) {
+                      uint64_t signal_inc) {
             constexpr size_t signal_offset = 0;
 
             nixlDeviceKernelParams post_params;
@@ -80,12 +80,11 @@ namespace {
             post_params.numIters = num_iters;
             post_params.reqHandle = setup_data.gpuReqHandle;
 
-            applySendMode(post_params, getSendMode());
+            applySendMode<signalPostTest>(post_params, getSendMode());
 
             post_params.signalPost.signalDescIndex = index;
             post_params.signalPost.signalInc = signal_inc;
             post_params.signalPost.signalOffset = signal_offset;
-            post_params.signalPost.channelId = channel_id;
 
             const nixl_status_t status = launchNixlDeviceKernel(post_params);
             ASSERT_EQ(status, NIXL_SUCCESS);
@@ -124,7 +123,7 @@ TEST_P(signalPostTest, Basic) {
     const uint64_t expected_value = signal_inc * num_iters * getNumOpsMultiplier();
 
     ASSERT_NO_FATAL_FAILURE(
-        runSignalPost(setup_data, num_iters, index, signal_inc, defaultChannelId));
+        runSignalPost(setup_data, num_iters, index, signal_inc));
 
     ASSERT_NO_FATAL_FAILURE(verifySignal(setup_data, expected_value));
 #endif

@@ -63,7 +63,7 @@ namespace {
             params.numIters = num_iters;
             params.reqHandle = setup_data.gpuReqHandle;
 
-            applySendMode(params, getSendMode());
+            applySendMode<partialWriteTest>(params, getSendMode());
 
             params.partialWrite.count = data_buf_count;
             params.partialWrite.descIndices = indices_gpu.get();
@@ -73,7 +73,6 @@ namespace {
             params.partialWrite.signalDescIndex = signal_desc_index;
             params.partialWrite.signalInc = signal_inc;
             params.partialWrite.signalOffset = signal_offset;
-            params.partialWrite.channelId = defaultChannelId;
 
             const nixl_status_t status = launchNixlDeviceKernel(params);
             ASSERT_EQ(status, NIXL_SUCCESS) << "Kernel execution failed with status: " << status;
@@ -84,10 +83,11 @@ namespace {
 
 TEST_P(partialWriteTest, Basic) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
+    const nixl_mem_t dst_mem_type = getDstMemType();
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, srcMemType, dst_mem_type, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(
@@ -97,11 +97,12 @@ TEST_P(partialWriteTest, Basic) {
 
 TEST_P(partialWriteTest, WithoutSignal) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
+    const nixl_mem_t dst_mem_type = getDstMemType();
     constexpr uint64_t signal_inc = 0;
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, srcMemType, dst_mem_type, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runPartialWrite(setup_data, sizes, defaultNumIters, signal_inc));
@@ -110,10 +111,11 @@ TEST_P(partialWriteTest, WithoutSignal) {
 
 TEST_P(partialWriteTest, SignalOnly) {
     const std::vector<size_t> sizes;
+    const nixl_mem_t dst_mem_type = getDstMemType();
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, srcMemType, dst_mem_type, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(
         runPartialWrite(setup_data, sizes, defaultNumIters, testSignalIncrement));

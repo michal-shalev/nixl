@@ -39,6 +39,7 @@ struct nixlDeviceKernelParams {
     size_t numIters;
     bool withRequest;
     bool withNoDelay;
+    unsigned numChannels = 1;
 
     nixlGpuXferReqH reqHandle;
 
@@ -47,7 +48,6 @@ struct nixlDeviceKernelParams {
         size_t localOffset;
         size_t remoteOffset;
         size_t size;
-        unsigned channelId;
     } singleWrite;
 
     struct {
@@ -59,19 +59,16 @@ struct nixlDeviceKernelParams {
         unsigned signalDescIndex;
         uint64_t signalInc;
         size_t signalOffset;
-        unsigned channelId;
     } partialWrite;
 
     struct {
         uint64_t signalInc;
-        unsigned channelId;
     } write;
 
     struct {
         unsigned signalDescIndex;
         uint64_t signalInc;
         size_t signalOffset;
-        unsigned channelId;
     } signalPost;
 
     struct {

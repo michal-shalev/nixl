@@ -38,6 +38,7 @@ enum class send_mode_t {
     NODELAY_WITH_REQ,
     NODELAY_WITHOUT_REQ,
     WITHOUT_NODELAY_WITHOUT_REQ,
+    MULTI_CHANNEL,
 };
 
 inline std::string_view
@@ -49,14 +50,19 @@ getSendModeStr(send_mode_t mode) {
         return "nodelay_without_req";
     case send_mode_t::WITHOUT_NODELAY_WITHOUT_REQ:
         return "without_nodelay_without_req";
+    case send_mode_t::MULTI_CHANNEL:
+        return "multi_channel";
     default:
         return "unknown";
     }
 }
 
+template<typename TestBase>
 inline void
 applySendMode(nixlDeviceKernelParams &params, send_mode_t mode) {
     switch (mode) {
+    case send_mode_t::MULTI_CHANNEL:
+        params.numChannels = TestBase::multiChannelCount;
     case send_mode_t::NODELAY_WITH_REQ:
         params.withNoDelay = true;
         params.withRequest = true;
@@ -72,34 +78,53 @@ applySendMode(nixlDeviceKernelParams &params, send_mode_t mode) {
     }
 }
 
-using device_test_params_t = std::tuple<nixl_gpu_level_t, send_mode_t>;
+struct device_test_params_t {
+    nixl_gpu_level_t level;
+    send_mode_t mode;
+    nixl_mem_t mem_type;
+
+    device_test_params_t(nixl_gpu_level_t l, send_mode_t m, nixl_mem_t mt)
+        : level(l), mode(m), mem_type(mt) {}
+};
 
 inline std::string_view
 getGpuLevelStr(nixl_gpu_level_t level) {
     switch (level) {
     case nixl_gpu_level_t::WARP:
-        return "WARP";
+        return "warp";
     case nixl_gpu_level_t::BLOCK:
-        return "BLOCK";
+        return "block";
     case nixl_gpu_level_t::THREAD:
-        return "THREAD";
+        return "thread";
     default:
-        return "UNKNOWN";
+        return "unknown";
+    }
+}
+
+inline std::string_view
+getMemTypeStr(nixl_mem_t mem_type) {
+    switch (mem_type) {
+    case VRAM_SEG:
+        return "dst_vram";
+    case DRAM_SEG:
+        return "dst_dram";
+    default:
+        return "unknown";
     }
 }
 
 struct testNameGenerator {
     static std::string
     device(const testing::TestParamInfo<device_test_params_t> &info) {
-        const auto level = std::get<0>(info.param);
-        const auto mode = std::get<1>(info.param);
-        return std::string("UCX_") + std::string(getGpuLevelStr(level)) + "_" +
-            std::string(getSendModeStr(mode));
+        const auto &p = info.param;
+        return std::string(getMemTypeStr(p.mem_type)) + "_" +
+               std::string(getGpuLevelStr(p.level)) + "_" +
+               std::string(getSendModeStr(p.mode));
     }
 
     static std::string
     level(const testing::TestParamInfo<nixl_gpu_level_t> &info) {
-        return std::string("UCX_") + std::string(getGpuLevelStr(info.param));
+        return std::string(getGpuLevelStr(info.param));
     }
 };
 

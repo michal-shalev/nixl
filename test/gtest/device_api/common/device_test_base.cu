@@ -19,7 +19,6 @@
 
 template class deviceApiTestBase<nixl_gpu_level_t>;
 template class deviceApiTestBase<device_test_params_t>;
-template class deviceApiTestBase<std::tuple<nixl_gpu_level_t, send_mode_t, nixl_mem_t>>;
 
 template<typename paramType>
 nixlAgentConfig
@@ -31,17 +30,22 @@ template<typename paramType>
 nixl_b_params_t
 deviceApiTestBase<paramType>::getBackendParams() {
     nixl_b_params_t params;
-    params["num_workers"] = std::to_string(numUcxWorkers);
+    params["num_workers"] = std::to_string(defaultNumUcxWorkers);
     return params;
 }
 
 template<typename paramType>
 void
 deviceApiTestBase<paramType>::SetUp() {
-    const cudaError_t cuda_error = cudaSetDevice(0);
-    if (cuda_error != cudaSuccess) {
-        FAIL() << "Failed to set CUDA device 0: " << cudaGetErrorString(cuda_error);
+    if constexpr (!std::is_same_v<paramType, nixl_gpu_level_t>) {
+        if (getSendMode() == send_mode_t::MULTI_CHANNEL) {
+            setenv("UCX_RC_GDA_NUM_CHANNELS", "32", 1);
+        }
     }
+
+    const cudaError_t cuda_error = cudaSetDevice(0);
+    ASSERT_EQ(cuda_error, cudaSuccess)
+        << "Failed to set CUDA device 0: " << cudaGetErrorString(cuda_error);
 
     for (size_t i = 0; i < 2; i++) {
         agents_.emplace_back(std::make_unique<nixlAgent>(getAgentName(i), getConfig()));
@@ -108,13 +112,13 @@ deviceApiTestBase<paramType>::createRegisteredMem(nixlAgent &agent,
 
 template<typename paramType>
 nixlAgent &
-deviceApiTestBase<paramType>::getAgent(size_t idx) {
+deviceApiTestBase<paramType>::getAgent(size_t idx) const {
     return *agents_[idx];
 }
 
 template<typename paramType>
 std::string
-deviceApiTestBase<paramType>::getAgentName(size_t idx) {
+deviceApiTestBase<paramType>::getAgentName(size_t idx) const {
     return absl::StrFormat("agent_%d", idx);
 }
 
@@ -127,7 +131,7 @@ deviceApiTestBase<paramType>::createXferRequest(const std::vector<testArray<uint
                                                 nixlXferReqH *&xfer_req,
                                                 nixlGpuXferReqH &gpu_req_handle,
                                                 std::string_view custom_param) {
-    nixl_opt_args_t extra_params = {};
+    nixl_opt_args_t extra_params;
     extra_params.hasNotif = true;
     extra_params.notifMsg = std::string(notificationMessage);
     extra_params.backends = {getBackendHandle(senderAgent)};

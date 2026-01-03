@@ -25,8 +25,6 @@ namespace {
     protected:
         void
         runWrite(const testSetupData &setup_data, size_t num_iters, uint64_t signal_inc) {
-            constexpr unsigned channel_id = defaultChannelId;
-
             nixlDeviceKernelParams params;
             params.operation = nixl_device_operation_t::WRITE;
             params.level = getLevel();
@@ -35,10 +33,9 @@ namespace {
             params.numIters = num_iters;
             params.reqHandle = setup_data.gpuReqHandle;
 
-            applySendMode(params, getSendMode());
+            applySendMode<writeTest>(params, getSendMode());
 
             params.write.signalInc = signal_inc;
-            params.write.channelId = channel_id;
 
             const nixl_status_t status = launchNixlDeviceKernel(params);
             ASSERT_EQ(status, NIXL_SUCCESS) << "Kernel execution failed with status: " << status;
@@ -49,10 +46,11 @@ namespace {
 
 TEST_P(writeTest, Basic) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
+    const nixl_mem_t dst_mem_type = getDstMemType();
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, srcMemType, dst_mem_type, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, defaultNumIters, testSignalIncrement));
@@ -61,11 +59,12 @@ TEST_P(writeTest, Basic) {
 
 TEST_P(writeTest, WithoutSignal) {
     const std::vector<size_t> sizes(defaultBufferCount, defaultBufferSize);
+    const nixl_mem_t dst_mem_type = getDstMemType();
     constexpr uint64_t signal_inc = 0;
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, srcMemType, dst_mem_type, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(initializeTestData(sizes, setup_data));
     ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, 1000, signal_inc));
@@ -74,10 +73,11 @@ TEST_P(writeTest, WithoutSignal) {
 
 TEST_P(writeTest, SignalOnly) {
     const std::vector<size_t> sizes;
+    const nixl_mem_t dst_mem_type = getDstMemType();
 
     testSetupData setup_data;
     auto guard = setup_data.makeCleanupGuard(this);
-    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, VRAM_SEG, VRAM_SEG, setup_data));
+    ASSERT_NO_FATAL_FAILURE(setupWithSignal(sizes, srcMemType, dst_mem_type, setup_data));
 
     ASSERT_NO_FATAL_FAILURE(runWrite(setup_data, 1000, testSignalIncrement));
 }
