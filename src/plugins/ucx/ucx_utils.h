@@ -143,28 +143,38 @@ public:
            nixlUcxReq *req = nullptr,
            const am_deleter_t &deleter = nullptr);
 
-    /* Data access */
+    /* Data access.
+     * When comp_cb is provided, it is attached as the UCX completion callback
+     * and is invoked exactly once (with comp_user_data) when an in-progress
+     * request completes. It is not invoked for immediate completions, where the
+     * call returns NIXL_SUCCESS or an error instead of a request. */
     [[nodiscard]] nixl_status_t
     read(uint64_t raddr,
          const nixl::ucx::rkey &rkey,
          void *laddr,
          nixlUcxMem &mem,
          size_t size,
-         nixlUcxReq &req);
+         nixlUcxReq &req,
+         ucp_send_nbx_callback_t comp_cb = nullptr,
+         void *comp_user_data = nullptr);
     [[nodiscard]] nixl_status_t
     write(void *laddr,
           nixlUcxMem &mem,
           uint64_t raddr,
           const nixl::ucx::rkey &rkey,
           size_t size,
-          nixlUcxReq &req);
+          nixlUcxReq &req,
+          ucp_send_nbx_callback_t comp_cb = nullptr,
+          void *comp_user_data = nullptr);
     nixl_status_t
     estimateCost(size_t size,
                  std::chrono::microseconds &duration,
                  std::chrono::microseconds &err_margin,
                  nixl_cost_t &method);
     nixl_status_t
-    flushEp(nixlUcxReq &req);
+    flushEp(nixlUcxReq &req,
+            ucp_send_nbx_callback_t comp_cb = nullptr,
+            void *comp_user_data = nullptr);
 
     [[nodiscard]] ucp_ep_h
     getEp() const noexcept {

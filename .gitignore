@@ -21,3 +21,15 @@ cufile.log
 
 # Asio
 subprojects/asio-*
+
+# liburing
+subprojects/liburing-*
+
+# Prometheus
+subprojects/prometheus-cpp/
+
+# TOML++
+subprojects/tomlplusplus-*
+
+# Meson wrap lockfile
+subprojects/.wraplock

@@ -41,6 +41,124 @@ namespace {
 }
 
 /****************************************
+ * Completion state (callback-based completion notification)
+ *****************************************/
+
+/*
+ * Per-transfer completion state shared between the posting/waiting thread and
+ * the UCX completion callbacks (which may run from the progress thread or from
+ * whichever thread drives ucp_worker_progress()).
+ *
+ * Only atomics are touched from the callback: a completed counter, and on
+ * failure a single status field set via compare-exchange. No allocation, no
+ * locks, no Python, and no UCX progress are performed in the callback.
+ */
+struct nixlUcxCompletionState {
+    // Number of callbacks we expect to fire. Incremented via expect() *before*
+    // the UCX op is submitted, so a callback running on the progress thread can
+    // never be observed before it has been accounted for. Decremented via
+    // unexpect() when an op completes without a callback (immediate path).
+    std::atomic<size_t> expected{0};
+    // Number of completion callbacks observed so far.
+    std::atomic<size_t> completed{0};
+    // Immediate (no-callback) completions, kept separately for debugging.
+    std::atomic<size_t> immediate{0};
+    // First failure status reported by any callback (NIXL_SUCCESS if none).
+    std::atomic<nixl_status_t> status{NIXL_SUCCESS};
+
+    nixlUcxCompletionState() = default;
+
+    // Atomics are not movable by default, but the enclosing handle is stored in
+    // a std::vector (composite chunks) that must stay movable. These are only
+    // invoked at handle (re)construction, before any request is posted, so a
+    // plain load/store relocation is safe and race-free.
+    nixlUcxCompletionState(nixlUcxCompletionState &&other) noexcept
+        : expected(other.expected.load(std::memory_order_relaxed)),
+          completed(other.completed.load(std::memory_order_relaxed)),
+          immediate(other.immediate.load(std::memory_order_relaxed)),
+          status(other.status.load(std::memory_order_relaxed)) {}
+
+    nixlUcxCompletionState &
+    operator=(nixlUcxCompletionState &&other) noexcept {
+        expected.store(other.expected.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        completed.store(other.completed.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        immediate.store(other.immediate.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        status.store(other.status.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        return *this;
+    }
+
+    void
+    reset() noexcept {
+        expected.store(0, std::memory_order_relaxed);
+        completed.store(0, std::memory_order_relaxed);
+        immediate.store(0, std::memory_order_relaxed);
+        status.store(NIXL_SUCCESS, std::memory_order_relaxed);
+    }
+
+    // Register an expected completion callback. MUST be called before the UCX
+    // op is submitted so the callback (which may run immediately on another
+    // thread) is always accounted for before it can fire.
+    void
+    expect() noexcept {
+        expected.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    // Roll back an expectation for an op that completed without a callback
+    // (immediate UCS_OK or immediate error).
+    void
+    unexpect() noexcept {
+        expected.fetch_sub(1, std::memory_order_relaxed);
+    }
+
+    // Account an immediate (no-callback) completion, for debugging.
+    void
+    recordImmediate() noexcept {
+        immediate.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    // Called from the completion callback when a posted op finishes.
+    void
+    complete(ucs_status_t s) noexcept {
+        if (__builtin_expect(s != UCS_OK, 0)) {
+            recordFailure(ucx_status_to_nixl(s));
+        }
+        completed.fetch_add(1, std::memory_order_release);
+    }
+
+    // True once every expected callback has fired. expect() runs before submit,
+    // so completed never exceeds expected and done() is never true early.
+    [[nodiscard]] bool
+    done() const noexcept {
+        return completed.load(std::memory_order_acquire) >=
+               expected.load(std::memory_order_acquire);
+    }
+
+    void
+    recordFailure(nixl_status_t s) noexcept {
+        nixl_status_t expected_status = NIXL_SUCCESS;
+        status.compare_exchange_strong(expected_status, s, std::memory_order_acq_rel);
+    }
+};
+
+/*
+ * UCX completion callback attached to every posted RMA/flush request. Minimal
+ * by design: record status/bump the completed counter (complete()), then free
+ * the request.
+ *
+ * Freeing here is the key lifetime rule: the request is released only when its
+ * callback actually fires (i.e. after completion is observed), never before.
+ * This is the canonical UCX idiom and avoids both (a) retaining O(N) requests
+ * until end-of-transfer and (b) the "free-before-completion" pattern that
+ * silently suppresses callbacks.
+ */
+static void
+nixlUcxXferCompletionCb(void *request, ucs_status_t status, void *user_data) {
+    auto *state = static_cast<nixlUcxCompletionState *>(user_data);
+    state->complete(status);
+    ucp_request_free(request);
+}
+
+/****************************************
  * Backend request management
 *****************************************/
 
@@ -48,8 +166,13 @@ class nixlUcxBackendH : public nixlBackendReqH {
 private:
     std::set<ucx_connection_ptr_t> connections_;
     std::vector<nixlUcxReq> requests_;
+    nixlUcxCompletionState completion_;
     nixlUcxWorker *worker;
     size_t worker_id;
+    // Whether the waiting/releasing thread should drive ucp_worker_progress().
+    // False when an external UCX progress thread owns the worker, so we only
+    // observe completion via the atomic counters / request status.
+    bool pollProgress_;
 
     // Notification to be sent after completion of all requests
     struct Notif {
@@ -75,23 +198,70 @@ private:
     }
 
 public:
-    nixlUcxBackendH(nixlUcxWorker *worker, size_t worker_id)
+    nixlUcxBackendH(nixlUcxWorker *worker, size_t worker_id, bool poll_progress = true)
         : worker(worker),
-          worker_id(worker_id) {}
+          worker_id(worker_id),
+          pollProgress_(poll_progress) {}
 
     auto &
     notification() {
         return notif;
     }
 
+    // Completion state shared with the UCX completion callbacks. Stable for the
+    // lifetime of the handle, so the pointer can be safely handed to UCX as
+    // user_data for every request posted from this handle.
+    nixlUcxCompletionState *
+    completionState() noexcept {
+        return &completion_;
+    }
+
     void
     reserve(size_t size) {
         requests_.reserve(size);
         NIXL_ASSERT(connections_.empty());
+        completion_.reset();
     }
 
+    // Record a distinct connection once per EP batch (not per request), so the
+    // flush phase can iterate over all touched connections.
+    void
+    addConnection(const ucx_connection_ptr_t &conn) {
+        connections_.insert(conn);
+    }
+
+    // Account for a callback-tracked request (RMA / flush) after submission.
+    // The matching completion_.expect() must already have been called before
+    // the op was submitted. The request itself is owned by its completion
+    // callback (which frees it), so nothing is stored here.
     nixl_status_t
-    append(nixl_status_t status, nixlUcxReq req, ucx_connection_ptr_t conn) {
+    append(nixl_status_t status) {
+        switch (status) {
+        case NIXL_IN_PROG:
+            // A completion callback will fire (and free the request) later;
+            // the expectation registered before submit stands.
+            break;
+        case NIXL_SUCCESS:
+            // Immediate completion: UCX returned UCS_OK, no callback will fire,
+            // so roll back the expectation and account it separately.
+            completion_.unexpect();
+            completion_.recordImmediate();
+            break;
+        default:
+            // Immediate error: no callback will fire. Roll back the expectation
+            // and release all previously initiated ops.
+            completion_.unexpect();
+            release();
+            return status;
+        }
+        return NIXL_SUCCESS;
+    }
+
+    // Append a request that is NOT callback-tracked (notification sendAm, which
+    // carries its own AM callback). These keep the original request-polling
+    // lifetime: stored here, polled in status(), freed when complete.
+    nixl_status_t
+    appendLegacy(nixl_status_t status, nixlUcxReq req, const ucx_connection_ptr_t &conn) {
         switch (status) {
         case NIXL_IN_PROG:
             requests_.push_back(req);
@@ -101,7 +271,6 @@ public:
             connections_.insert(conn);
             break;
         default:
-            // Error. Release all previously initiated ops and exit:
             release();
             return status;
         }
@@ -120,67 +289,100 @@ public:
 
     virtual nixl_status_t
     release() {
-        // TODO: Error log: uncompleted requests found! Cancelling ...
+        // Callback-tracked requests free themselves from their completion
+        // callback, which dereferences completion_ (this handle's member). We
+        // must not let the handle be destroyed while any such callback is still
+        // outstanding, so drain them first.
+        //
+        // The drain is bounded and stall-aware so it can never spin forever:
+        // the deadline is reset whenever a completion is observed, so a slow
+        // but progressing transfer is tolerated, while a genuinely stuck UCX
+        // state (no forward progress) is abandoned with a loud error. When an
+        // external progress thread owns the worker, we wait (yield) instead of
+        // calling progress() ourselves.
+        nixl_status_t drain_ret = NIXL_SUCCESS;
+        if (!completion_.done()) {
+            constexpr auto stall_timeout = std::chrono::seconds(10);
+            size_t last_completed = completion_.completed.load(std::memory_order_acquire);
+            auto deadline = std::chrono::steady_clock::now() + stall_timeout;
+
+            while (!completion_.done()) {
+                if (pollProgress_) {
+                    worker->progress();
+                } else {
+                    std::this_thread::yield();
+                }
+
+                const size_t cur = completion_.completed.load(std::memory_order_acquire);
+                if (cur != last_completed) {
+                    // Forward progress: extend the deadline.
+                    last_completed = cur;
+                    deadline = std::chrono::steady_clock::now() + stall_timeout;
+                } else if (std::chrono::steady_clock::now() >= deadline) {
+                    NIXL_ERROR << "UCX release() stalled: "
+                               << (completion_.expected.load() - cur)
+                               << " completion callback(s) never fired; abandoning drain";
+                    drain_ret = NIXL_ERR_BACKEND;
+                    break;
+                }
+            }
+        }
+
+        // Legacy (notification) requests are owned here: cancel if still in
+        // progress, then free.
         for (nixlUcxReq req : requests_) {
             nixl_status_t ret = ucx_status_to_nixl(ucp_request_check_status(req));
             if (ret == NIXL_IN_PROG) {
-                // TODO: Need process this properly.
-                // it may not be enough to cancel UCX request
                 worker->reqCancel(req);
             }
             worker->reqRelease(req);
         }
         requests_.clear();
         connections_.clear();
-        return NIXL_SUCCESS;
+        completion_.reset();
+        return drain_ret;
     }
 
     virtual nixl_status_t
     status() {
-        if (requests_.empty()) {
-            /* No pending transmissions */
-            connections_.clear();
-            return NIXL_SUCCESS;
+        /* Drive progress only when no external progress thread owns the worker;
+         * otherwise that thread fires the completion callbacks and we just read
+         * the atomic counters (and poll any legacy notification request). */
+        if (pollProgress_) {
+            while (worker->progress())
+                ;
         }
 
-        /* Maximum progress */
-        while (worker->progress())
-            ;
+        const bool data_complete = completion_.done();
 
-        /* If last request is incomplete, return NIXL_IN_PROG early without
-         * checking other requests */
-        nixlUcxReq req = requests_.back();
-        nixl_status_t ret = ucx_status_to_nixl(ucp_request_check_status(req));
-        if (ret == NIXL_IN_PROG) {
-            return NIXL_IN_PROG;
-        } else if (ret != NIXL_SUCCESS) {
-            return checkConnection(ret);
-        }
-
-        /* Last request completed successfully, all the others must be in the
-         * same state. TODO: remove extra checks? */
-        size_t incomplete_reqs = 0;
-        nixl_status_t out_ret = NIXL_SUCCESS;
-        for (nixlUcxReq req : requests_) {
-            nixl_status_t ret = ucx_status_to_nixl(ucp_request_check_status(req));
-            if (__builtin_expect(ret == NIXL_SUCCESS, 0)) {
-                worker->reqRelease(req);
-            } else if (ret == NIXL_IN_PROG) {
-                if (out_ret == NIXL_SUCCESS) {
-                    out_ret = NIXL_IN_PROG;
+        /* Poll legacy (notification) requests, if any. */
+        bool legacy_complete = true;
+        if (!requests_.empty()) {
+            size_t incomplete_reqs = 0;
+            for (nixlUcxReq req : requests_) {
+                nixl_status_t ret = ucx_status_to_nixl(ucp_request_check_status(req));
+                if (ret == NIXL_SUCCESS) {
+                    worker->reqRelease(req);
+                } else if (ret == NIXL_IN_PROG) {
+                    legacy_complete = false;
+                    requests_[incomplete_reqs++] = req;
+                } else {
+                    requests_.resize(incomplete_reqs);
+                    return checkConnection(ret);
                 }
-                requests_[incomplete_reqs++] = req;
-            } else {
-                // Any other ret value is ERR and will be returned
-                out_ret = checkConnection(ret);
             }
+            requests_.resize(incomplete_reqs);
         }
 
-        requests_.resize(incomplete_reqs);
-        if (requests_.empty()) {
-            connections_.clear();
+        if (!data_complete || !legacy_complete) {
+            return NIXL_IN_PROG;
         }
-        return out_ret;
+
+        /* All callbacks observed and legacy requests drained. */
+        nixl_status_t out_ret = completion_.status.load(std::memory_order_acquire);
+        connections_.clear();
+
+        return (out_ret == NIXL_SUCCESS) ? NIXL_SUCCESS : checkConnection(out_ret);
     }
 
     void
@@ -1105,7 +1307,11 @@ nixl_status_t nixlUcxEngine::prepXfer (const nixl_xfer_op_t &operation,
 
     const auto worker_id = getWorkerId(opt_args);
     /* TODO: try to get from a pool first */
-    auto *ucx_handle = new nixlUcxBackendH(getWorker(worker_id).get(), worker_id);
+    /* When a UCX progress thread is enabled it owns the worker, so the waiting
+     * thread must not also drive progress (avoid double-progress); it only
+     * reads the completion counters. */
+    auto *ucx_handle =
+        new nixlUcxBackendH(getWorker(worker_id).get(), worker_id, !progressThreadEnabled_);
 
     handle = ucx_handle;
 
@@ -1169,14 +1375,21 @@ nixl_status_t nixlUcxEngine::estimateXferCost (const nixl_xfer_op_t &operation,
 }
 
 nixlUcxEngine::batchResult
-nixlUcxEngine::sendXferRangeBatch(nixlUcxEp &ep,
+nixlUcxEngine::sendXferRangeBatch(nixlUcxBackendH *handle,
+                                  ucx_connection_ptr_t conn,
+                                  nixlUcxEp &ep,
                                   nixl_xfer_op_t operation,
                                   const nixl_meta_dlist_t &local,
                                   const nixl_meta_dlist_t &remote,
                                   size_t worker_id,
                                   size_t start_idx,
                                   size_t end_idx) {
-    batchResult result = {NIXL_SUCCESS, 0, nullptr};
+    batchResult result = {NIXL_SUCCESS, 0};
+    nixlUcxCompletionState *completion = handle->completionState();
+
+    /* Record the connection once for the whole EP batch (used by the flush
+     * phase), rather than once per request. */
+    handle->addConnection(conn);
 
     for (size_t i = start_idx; i < end_idx; ++i) {
         void *laddr = (void *)local[i].addr;
@@ -1193,28 +1406,38 @@ nixlUcxEngine::sendXferRangeBatch(nixlUcxEp &ep,
 
         ++result.size;
         nixlUcxReq req;
+        /* Attach a completion callback to every op. The callback bumps the
+         * completion counter and frees its own request, so the request is never
+         * stored here and never freed before its callback fires.
+         *
+         * Register the expected callback *before* submitting, so a callback
+         * firing on the progress thread is always accounted for first. */
+        completion->expect();
         nixl_status_t ret = operation == NIXL_READ ?
-            ep.read(raddr, rmd->getRkey(worker_id), laddr, lmd->mem, lsize, req) :
-            ep.write(laddr, lmd->mem, raddr, rmd->getRkey(worker_id), lsize, req);
+            ep.read(raddr,
+                    rmd->getRkey(worker_id),
+                    laddr,
+                    lmd->mem,
+                    lsize,
+                    req,
+                    nixlUcxXferCompletionCb,
+                    completion) :
+            ep.write(laddr,
+                     lmd->mem,
+                     raddr,
+                     rmd->getRkey(worker_id),
+                     lsize,
+                     req,
+                     nixlUcxXferCompletionCb,
+                     completion);
 
-        if (ret == NIXL_IN_PROG) {
-            if (__builtin_expect(result.req != nullptr, 1)) {
-                ucp_request_free(result.req);
-            }
-            result.req = req;
-        } else if (ret != NIXL_SUCCESS) {
-            result.status = ret;
-            if (result.req != nullptr) {
-                ucp_request_free(result.req);
-                result.req = nullptr;
-            }
+        nixl_status_t append_ret = handle->append(ret);
+        if (append_ret != NIXL_SUCCESS) {
+            result.status = append_ret;
             break;
         }
     }
 
-    if (result.status == NIXL_SUCCESS && result.req) {
-        result.status = NIXL_IN_PROG;
-    }
     return result;
 }
 
@@ -1234,20 +1457,19 @@ nixlUcxEngine::sendXferRange(const nixl_xfer_op_t &operation,
         return NIXL_ERR_INVALID_PARAM;
     }
 
-    /* Assuming we have a single EP, we need 3 requests: one pending request,
-     * one flush request, and one notification request */
-    intHandle->reserve(3);
+    /* RMA and flush requests are callback-tracked (freed by their callbacks),
+     * so requests_ only ever holds the optional notification request. */
+    intHandle->reserve(2);
 
     for (size_t i = start_idx; i < end_idx;) {
         /* Send requests to a single EP */
         auto rmd = static_cast<nixlUcxPublicMetadata *>(remote[i].metadataP);
         auto &ep = rmd->conn->getEp(workerId);
-        auto result = sendXferRangeBatch(*ep, operation, local, remote, workerId, i, end_idx);
-
-        /* Append a single pending request for the entire EP batch */
-        ret = intHandle->append(result.status, result.req, rmd->conn);
-        if (ret != NIXL_SUCCESS) {
-            return ret;
+        /* Submits and appends every in-progress request for this EP batch */
+        auto result = sendXferRangeBatch(
+            intHandle, rmd->conn, *ep, operation, local, remote, workerId, i, end_idx);
+        if (result.status != NIXL_SUCCESS) {
+            return result.status;
         }
 
         i += result.size;
@@ -1257,12 +1479,15 @@ nixlUcxEngine::sendXferRange(const nixl_xfer_op_t &operation,
      * Flush keeps intHandle non-empty until the operation is actually
      * completed, which can happen after local requests completion.
      * We need to flush all distinct connections to ensure that the operation
-     * is actually completed.
+     * is actually completed. The flush request also carries a completion
+     * callback so its completion is observed via the same atomic counter.
      */
     for (auto &conn : intHandle->getConnections()) {
         nixlUcxReq req;
-        ret = conn->getEp(workerId)->flushEp(req);
-        if (intHandle->append(ret, req, conn) != NIXL_SUCCESS) {
+        /* Register the expected flush callback before submitting it. */
+        intHandle->completionState()->expect();
+        ret = conn->getEp(workerId)->flushEp(req, nixlUcxXferCompletionCb, intHandle->completionState());
+        if (intHandle->append(ret) != NIXL_SUCCESS) {
             return ret;
         }
     }
@@ -1304,7 +1529,7 @@ nixlUcxEngine::postXfer(const nixl_xfer_op_t &operation,
                                 opt_args->notifMsg,
                                 rmd->conn->getEp(int_handle->getWorkerId()),
                                 &req);
-            if (int_handle->append(ret, req, rmd->conn) != NIXL_SUCCESS) {
+            if (int_handle->appendLegacy(ret, req, rmd->conn) != NIXL_SUCCESS) {
                 return ret;
             }
 
@@ -1338,11 +1563,13 @@ nixl_status_t nixlUcxEngine::checkXfer (nixlBackendReqH* handle) const
     }
 
     nixlUcxReq req;
-    nixl_status_t status =
-        notifSendPriv(notif->agent, notif->payload, conn->getEp(intHandle->getWorkerId()), &req);
+    nixl_status_t status = notifSendPriv(notif->agent,
+                                         notif->payload,
+                                         conn->getEp(intHandle->getWorkerId()),
+                                         &req);
     notif.reset();
 
-    if (intHandle->append(status, req, conn) != NIXL_SUCCESS) {
+    if (intHandle->appendLegacy(status, req, conn) != NIXL_SUCCESS) {
         return status;
     }
 

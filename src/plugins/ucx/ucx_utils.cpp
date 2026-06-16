@@ -282,7 +282,9 @@ nixlUcxEp::read(uint64_t raddr,
                 void *laddr,
                 nixlUcxMem &mem,
                 size_t size,
-                nixlUcxReq &req) {
+                nixlUcxReq &req,
+                ucp_send_nbx_callback_t comp_cb,
+                void *comp_user_data) {
     nixl_status_t status = checkTxState();
     if (status != NIXL_SUCCESS) {
         return status;
@@ -292,6 +294,11 @@ nixlUcxEp::read(uint64_t raddr,
         .op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FLAG_MULTI_SEND,
         .memh = mem.memh,
     };
+    if (comp_cb) {
+        param.op_attr_mask |= UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+        param.cb.send = comp_cb;
+        param.user_data = comp_user_data;
+    }
 
     ucs_status_ptr_t request = ucp_get_nbx(eph, laddr, size, raddr, rkey.get(), &param);
     if (UCS_PTR_IS_PTR(request)) {
@@ -308,7 +315,9 @@ nixlUcxEp::write(void *laddr,
                  uint64_t raddr,
                  const nixl::ucx::rkey &rkey,
                  size_t size,
-                 nixlUcxReq &req) {
+                 nixlUcxReq &req,
+                 ucp_send_nbx_callback_t comp_cb,
+                 void *comp_user_data) {
     nixl_status_t status = checkTxState();
     if (status != NIXL_SUCCESS) {
         return status;
@@ -318,6 +327,11 @@ nixlUcxEp::write(void *laddr,
         .op_attr_mask = UCP_OP_ATTR_FIELD_MEMH | UCP_OP_ATTR_FLAG_MULTI_SEND,
         .memh = mem.memh,
     };
+    if (comp_cb) {
+        param.op_attr_mask |= UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+        param.cb.send = comp_cb;
+        param.user_data = comp_user_data;
+    }
 
     ucs_status_ptr_t request = ucp_put_nbx(eph, laddr, size, raddr, rkey.get(), &param);
     if (UCS_PTR_IS_PTR(request)) {
@@ -357,11 +371,16 @@ nixlUcxEp::estimateCost(size_t size,
 }
 
 nixl_status_t
-nixlUcxEp::flushEp(nixlUcxReq &req) {
+nixlUcxEp::flushEp(nixlUcxReq &req, ucp_send_nbx_callback_t comp_cb, void *comp_user_data) {
     ucp_request_param_t param;
     ucs_status_ptr_t request;
 
     param.op_attr_mask = 0;
+    if (comp_cb) {
+        param.op_attr_mask = UCP_OP_ATTR_FIELD_CALLBACK | UCP_OP_ATTR_FIELD_USER_DATA;
+        param.cb.send = comp_cb;
+        param.user_data = comp_user_data;
+    }
     request = ucp_ep_flush_nbx(eph, &param);
 
     if (UCS_PTR_IS_PTR(request)) {

@@ -224,13 +224,19 @@ if cuda_dep.found()
     endif
 
     # Set the Python CUDA-specific wheel directory
-    cuda_version_major = nvcc.version().split('.')[0]
-    if cuda_version_major == '12'
-        cuda_wheel_dir = 'nixl_cu12'
-    elif cuda_version_major == '13'
-        cuda_wheel_dir = 'nixl_cu13'
+    wheel_variant_opt = get_option('wheel_variant')
+    if wheel_variant_opt != ''
+        cuda_wheel_dir = 'nixl_' + wheel_variant_opt
+        message('Using wheel_variant override: ' + cuda_wheel_dir)
     else
-        error('Unsupported CUDA version: ' + cuda_version_major)
+        cuda_version_major = nvcc.version().split('.')[0]
+        if cuda_version_major == '12'
+            cuda_wheel_dir = 'nixl_cu12'
+        elif cuda_version_major == '13'
+            cuda_wheel_dir = 'nixl_cu13'
+        else
+            error('Unsupported CUDA version: ' + cuda_version_major)
+        endif
     endif
 else
     warning('CUDA not found. UCX backend will be built without CUDA support, and some plugins will be disabled.')

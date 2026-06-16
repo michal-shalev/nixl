@@ -40,6 +40,8 @@
 
 enum ucx_cb_op_t { NOTIF_STR };
 
+class nixlUcxBackendH;
+
 class nixlUcxConnection : public nixlBackendConnMD {
     private:
         std::vector<std::unique_ptr<nixlUcxEp>> eps;
@@ -271,11 +273,15 @@ private:
     struct batchResult {
         nixl_status_t status;
         size_t size;
-        nixlUcxReq req;
     };
 
+    // Submits the RMA ops for a single EP and appends every resulting in-progress
+    // request (each with a completion callback attached) to the handle. Returns
+    // the number of descriptors consumed and the first error, if any.
     static batchResult
-    sendXferRangeBatch(nixlUcxEp &ep,
+    sendXferRangeBatch(nixlUcxBackendH *handle,
+                       ucx_connection_ptr_t conn,
+                       nixlUcxEp &ep,
                        nixl_xfer_op_t operation,
                        const nixl_meta_dlist_t &local,
                        const nixl_meta_dlist_t &remote,
